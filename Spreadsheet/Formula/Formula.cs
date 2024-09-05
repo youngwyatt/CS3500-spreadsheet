@@ -17,8 +17,10 @@
 
 namespace CS3500.Formula;
 
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using System.Text;
 
 /// <summary>
 ///   <para>
@@ -54,9 +56,25 @@ public class Formula
     ///   represents valid variable name strings.
     /// </summary>
     private const string VariableRegExPattern = @"[a-zA-Z]+\d+";
+
+    /// <summary>
+    ///   Numbers can be in any format, including scientific notation using 
+    ///   e or E. Negative numbers not included. This pattern represents all 
+    ///   valid numbers.
+    /// </summary>
     private const string AnyNumberRegExPattern = @"\d*\.?\d+([eE][-+]?\d+)?";
-    private const string ScientificNotationRegExPattern = @"\d*\.?\d* ([eE][-+]?\d+)";
+
+    /// <summary>
+    ///   Accepted operators are +, *, /, and -. This pattern represents the 
+    ///   valid operators.
+    /// </summary>
     private const string OperatorRegExPattern = "[+-/*]";
+
+    /// <summary>
+    ///   String for canonical form of formula returned by ToString() method.
+    ///   Built in constructor.
+    /// </summary>
+    private string canonicalFormula;
 
     /// <summary>
     ///   Initializes a new instance of the <see cref="Formula"/> class.
@@ -87,8 +105,7 @@ public class Formula
     /// <param name="formula"> The string representation of the formula to be created.</param>
     public Formula(string formula)
     {
-        // FIXME: implement your code here
-        // Check if expression passed is valid
+        // parse formula into List of strings of tokens
         List<string> tokens = GetTokens(formula);
         string? prevToken = null;
         int openingCount = 0;
@@ -98,15 +115,18 @@ public class Formula
         {
             throw new FormulaFormatException("Expression Empty");
         }
+
+        StringBuilder canonicalForm = new StringBuilder();
+
         foreach (string token in tokens)
         {
             // first pass check if token is valid 
-            if (!IsVar(token) && !IsOperator(token) && !IsNumber(token) && token != "(" && token != ")")
+            if (!IsVar(token) && !IsOper(token) && !IsNum(token) && token != "(" && token != ")")
             {
                 throw new FormulaFormatException(token.ToString());
             }
             // first token rule
-            if (prevToken == null && !IsVar(token) && !IsNumber(token) && token != "(")
+            if (prevToken == null && !IsVar(token) && !IsNum(token) && token != "(")
             {
                 throw new FormulaFormatException("Invalid first token: " + token.ToString());
             }
@@ -124,21 +144,40 @@ public class Formula
                 throw new FormulaFormatException("Number of closing parenthesis is greater then number of opening parenthesis.");
             }
             // check parenthesis/operator following rule
-            if (prevToken != null && (prevToken == "(" || IsOperator(prevToken))) 
+            if (prevToken != null && (prevToken == "(" || IsOper(prevToken))) 
             {
-                if (!IsNumber(token) && !IsVar(token) && token != "(") 
+                if (!IsNum(token) && !IsVar(token) && token != "(") 
                 {
                     throw new FormulaFormatException("Token following an opening parenthesis or an operator must be a number, variable, or opening parenthesis");
                 }
             }
             // check extra following rule
-            if (prevToken != null && (IsVar(prevToken) || IsNumber(prevToken) || prevToken == ")"))
+            if (prevToken != null && (IsVar(prevToken) || IsNum(prevToken) || prevToken == ")"))
             {
-                if (!IsOperator(token) && token != ")")
+                if (!IsOper(token) && token != ")")
                 {
                     throw new FormulaFormatException("Invalid token following a number, variable, or closing parenthesis: " + token);
                 }
             }
+
+            // build the canonical form
+            if (IsNum(token))
+            {
+                // use double.ToString for numbers
+                double temp = double.Parse(token);
+                canonicalForm.Append(temp.ToString()); 
+            }
+            else if (IsVar(token))
+            {
+                // normalize variables to uppercase
+                canonicalForm.Append(token.ToUpper()); 
+            }
+            else
+            {
+                // parenthesis/operators
+                canonicalForm.Append(token);
+            }
+
             prevToken = token;
         }
         // check balanced parenthesis rule 
@@ -147,10 +186,12 @@ public class Formula
             throw new FormulaFormatException("Parenthesis unbalanced");
         }
         // check last token rule
-        if (prevToken != ")" && prevToken != null && !IsVar(prevToken) && !IsNumber(prevToken)) 
+        if (prevToken != ")" && prevToken != null && !IsVar(prevToken) && !IsNum(prevToken)) 
         {
             throw new FormulaFormatException("Invalid last token: " + prevToken.ToString());
         }
+        // store canonical form
+        canonicalFormula = canonicalForm.ToString();
     }
 
     /// <summary>
@@ -172,8 +213,18 @@ public class Formula
     /// <returns> the set of variables (string names) representing the variables referenced by the formula. </returns>
     public ISet<string> GetVariables()
     {
-        // FIXME: implement your code here
-        return new HashSet<string>();
+        // get tokens using parser
+        List<string> tokens = GetTokens(this.canonicalFormula);
+        HashSet<string> returnVars = new HashSet<string>();
+        foreach (string token in tokens) 
+        {
+            // if token is variable, normalize to uppercase then add to HashSet
+            if (IsVar(token)) 
+            {
+                returnVars.Add(token);
+            }
+        }
+        return returnVars;
     }
 
     /// <summary>
@@ -208,9 +259,7 @@ public class Formula
     /// </returns>
     public override string ToString()
     {
-        // FIXME: add your code here.
-        // Use double.ToString when dealing with numbers.
-        return string.Empty;
+        return canonicalFormula;
     }
 
     /// <summary>
@@ -231,7 +280,7 @@ public class Formula
     /// </summary>
     /// <param name="token"> A token that may be an operator. </param>
     /// <returns> true if the string matches the requirements, e.g., + or *. </returns>
-    private static bool IsOperator(string token)
+    private static bool IsOper(string token)
     {
         string standaloneOperatorPattern = $"^{OperatorRegExPattern}";
         return Regex.IsMatch(token, standaloneOperatorPattern);
@@ -243,7 +292,7 @@ public class Formula
     /// </summary>
     /// <param name="token"> A token that may be a number. </param>
     /// <returns> true if the string matches the requirements, e.g., 350.45 or 2.3E-6. </returns>
-    private static bool IsNumber(string token)
+    private static bool IsNum(string token)
     {
         string standaloneNumberPattern = $"^{AnyNumberRegExPattern}";
         return Regex.IsMatch(token, standaloneNumberPattern);

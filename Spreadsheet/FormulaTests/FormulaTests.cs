@@ -184,6 +184,12 @@ public class FormulaSyntaxTests
     }
 
     [TestMethod]
+    public void FormulaConstructor_TestSingleTokenSingleNumberWithDecimalToken_Valid()
+    {
+        _ = new Formula("23.");
+    }
+
+    [TestMethod]
     public void FormulaConstructor_TestSingleTokenVariableOneLetterOneNumberToken_Valid()
     {
         _ = new Formula("a1");
@@ -480,5 +486,61 @@ public class FormulaSyntaxTests
         _ = new Formula("A1 1 + 1");
     }
 
+    // --- Tests for ToString Method ---
+
+    [TestMethod]
+    public void FormulaToString_UniqueVariablesWithSpaces_Valid() 
+    {
+        Formula formula = new Formula("x1 + y1");
+        Assert.AreEqual("X1+Y1", formula.ToString());
+    }
+
+    [TestMethod]
+    public void FormulaToString_UniqueVariablesDecimalNumber_Valid()
+    {
+        Formula formula = new Formula("Ab1 + y23 - 67.120000");
+        Assert.AreEqual("AB1+Y23-67.12", formula.ToString());
+    }
+
+    [TestMethod]
+    public void FormulaToString_ParenthesisScientificNotation_Valid()
+    {
+        Formula formula = new Formula("((B1* 2) - 6.32E3)");
+        Assert.AreEqual("((B1*2)-6320)", formula.ToString());
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaToString_Empty_Invalid()
+    {
+        Formula formula = new Formula(" ");
+        Assert.AreNotEqual(" ", formula.ToString());
+    }
+
+    // --- Tests for GetVariables() Method ---
+
+    [TestMethod]
+    public void FormulaGetVariables_UniqueVariablesNumbers_ValidCount() 
+    {
+        Formula formula = new Formula("x2 + BY4 /(12 * 2)");
+        ISet<string> vars = formula.GetVariables();
+        Assert.AreEqual(2, vars.Count);
+    }
+
+    [TestMethod]
+    public void FormulaGetVariables_UniqueVariablesNumbers_Valid()
+    {
+        Formula formula = new Formula("x2 + BY4 /(12 * 2)");
+        ISet<string> vars = formula.GetVariables();
+        CollectionAssert.AreEquivalent(new HashSet<string> {"X2", "BY4"}.ToList(), vars.ToList());
+    }
+
+    [TestMethod]
+    public void FormulaGetVariables_EmptySet_ValidCount()
+    {
+        Formula formula = new Formula("21 + 2E7 *(4-2)");
+        ISet<string> vars = formula.GetVariables();
+        Assert.AreEqual(0, vars.Count);
+    }
 
 }
