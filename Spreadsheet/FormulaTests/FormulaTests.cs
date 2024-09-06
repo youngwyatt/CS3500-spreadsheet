@@ -72,26 +72,124 @@ public class FormulaSyntaxTests
         _ = new Formula(string.Empty);  // note: it is arguable that you should replace "" with string.Empty for readability and clarity of intent (e.g., not a cut and paste error or a "I forgot to put something there" error).
     }
 
-    // Test for invalid tokens
+    // Tests for invalid character tokens
     [TestMethod]
     [ExpectedException(typeof(FormulaFormatException))]
-    public void FormulaConstructor_TestSingleTokenDollarSign_Invalid()
+    public void FormulaConstructor_TestExclamationPointToken_Invalid()
     {
-        _ = new Formula("$");
+        _ = new Formula("1 ! 1");
     }
 
     [TestMethod]
     [ExpectedException(typeof(FormulaFormatException))]
-    public void FormulaConstructor_TestSingleTokenQuestionMark_Invalid()
+    public void FormulaConstructor_TestAtToken_Invalid()
     {
-        _ = new Formula("?");
+        _ = new Formula("1 @ 1");
     }
 
     [TestMethod]
     [ExpectedException(typeof(FormulaFormatException))]
-    public void FormulaConstructor_TestSingleTokenUnderscore_Invalid()
+    public void FormulaConstructor_TestPoundToken_Invalid()
     {
-        _ = new Formula("_");
+        _ = new Formula("1 # 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestDollarToken_Invalid()
+    {
+        _ = new Formula("1 $ 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestPercentToken_Invalid()
+    {
+        _ = new Formula("1 % 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestCarrotToken_Invalid()
+    {
+        _ = new Formula("1 ^ 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestAmpersandToken_Invalid()
+    {
+        _ = new Formula("1 & 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestUnderscoreToken_Invalid()
+    {
+        _ = new Formula("1 _ 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestEqualsToken_Invalid()
+    {
+        _ = new Formula("1 = 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestBracesToken_Invalid()
+    {
+        _ = new Formula("{ 1 }");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestBracketsToken_Invalid()
+    {
+        _ = new Formula("[ 1 ]");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestSlashToken_Invalid()
+    {
+        _ = new Formula("1 | 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestColonToken_Invalid()
+    {
+        _ = new Formula("1 : 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestSemicolonToken_Invalid()
+    {
+        _ = new Formula("1 ; 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestQuoteToken_Invalid()
+    {
+        _ = new Formula("1 ' 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestLeftAngleToken_Invalid()
+    {
+        _ = new Formula("1 < 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestRightAngleToken_Invalid()
+    {
+        _ = new Formula("1 > 1");
     }
 
     // --- Tests for Valid Token Rule ---
@@ -124,13 +222,6 @@ public class FormulaSyntaxTests
     public void FormulaConstructor_TestSingleTokenNumberBetweenLettersToken_Invalid()
     {
         _ = new Formula("A2B");
-    }
-
-    [TestMethod]
-    [ExpectedException(typeof(FormulaFormatException))]
-    public void FormulaConstructor_TestSingleTokenKaratToken_Invalid()
-    {
-        _ = new Formula("2^3");
     }
 
     [TestMethod]
@@ -241,12 +332,6 @@ public class FormulaSyntaxTests
     public void FormulaConstructor_TestSingleTokenNumberDecimalToken_Valid()
     {
         _ = new Formula("3.14");
-    }
-
-    [TestMethod]
-    public void FormulaConstructor_TestSingleTokenNumberDecimalNoNumsAfterDecimalToken_Valid()
-    {
-        _ = new Formula("3.");
     }
 
     [TestMethod]
@@ -481,9 +566,37 @@ public class FormulaSyntaxTests
 
     [TestMethod]
     [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestExtraFollowingRuleVariableAfterVariable_Invalid()
+    {
+        _ = new Formula("Z1 a1 + 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestExtraFollowingRuleClosingParenthesisAfterOperator_Invalid()
+    {
+        _ = new Formula("(1 + )");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
     public void FormulaConstructor_TestExtraFollowingRuleVariableBeforeNumberNoOperator_Invalid()
     {
         _ = new Formula("A1 1 + 1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestExtraFollowingRuleVariableAfterClosingParenthesis_Invalid()
+    {
+        _ = new Formula("(1+1)a1");
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestExtraFollowingRuleOpenParenthesisAfterExpression_Invalid()
+    {
+        _ = new Formula("(1+1)()");
     }
 
     // --- Tests for ToString Method ---

@@ -70,6 +70,12 @@ public class Formula
     /// </summary>
     private const string OperatorRegExPattern = "[+-/*]";
 
+    ///<summary>
+    ///  Private member variable for holding the parsed tokens to avoid 
+    ///  recalling GetTokens()
+    ///</summary>
+    private List<string> allTokens = new List<string>();
+
     /// <summary>
     ///   String for canonical form of formula returned by ToString() method.
     ///   Built in constructor.
@@ -107,6 +113,7 @@ public class Formula
     {
         // parse formula into List of strings of tokens
         List<string> tokens = GetTokens(formula);
+        allTokens = tokens;
         string? prevToken = null;
         int openingCount = 0;
         int closingCount = 0;
@@ -138,26 +145,23 @@ public class Formula
             {
                 closingCount++;
             }
+
             // check closing parenthesis rule
             if (closingCount > openingCount)
             {
                 throw new FormulaFormatException("Number of closing parenthesis is greater then number of opening parenthesis.");
             }
+
             // check parenthesis/operator following rule
-            if (prevToken != null && (prevToken == "(" || IsOper(prevToken))) 
+            if (prevToken != null && (prevToken == "(" || IsOper(prevToken)) && !(IsNum(token) || IsVar(token) || token == "("))
             {
-                if (!IsNum(token) && !IsVar(token) && token != "(") 
-                {
-                    throw new FormulaFormatException("Token following an opening parenthesis or an operator must be a number, variable, or opening parenthesis");
-                }
+                throw new FormulaFormatException("Token following an opening parenthesis or an operator must be a number, variable, or opening parenthesis");
             }
+
             // check extra following rule
-            if (prevToken != null && (IsVar(prevToken) || IsNum(prevToken) || prevToken == ")"))
+            if (prevToken != null && (IsVar(prevToken) || IsNum(prevToken) || prevToken == ")") && !(IsOper(token) || token == ")"))
             {
-                if (!IsOper(token) && token != ")")
-                {
-                    throw new FormulaFormatException("Invalid token following a number, variable, or closing parenthesis: " + token);
-                }
+                throw new FormulaFormatException("Invalid token following a number, variable, or closing parenthesis: " + token);
             }
 
             // build the canonical form
@@ -213,15 +217,14 @@ public class Formula
     /// <returns> the set of variables (string names) representing the variables referenced by the formula. </returns>
     public ISet<string> GetVariables()
     {
-        // get tokens using parser
-        List<string> tokens = GetTokens(this.canonicalFormula);
         HashSet<string> returnVars = new HashSet<string>();
-        foreach (string token in tokens) 
+        // loop through each token and store variables
+        foreach (string token in allTokens) 
         {
             // if token is variable, normalize to uppercase then add to HashSet
             if (IsVar(token)) 
             {
-                returnVars.Add(token);
+                returnVars.Add(token.ToUpper());
             }
         }
         return returnVars;
