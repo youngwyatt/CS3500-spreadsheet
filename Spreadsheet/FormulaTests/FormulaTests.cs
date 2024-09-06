@@ -656,4 +656,12 @@ public class FormulaSyntaxTests
         Assert.AreEqual(0, vars.Count);
     }
 
+    [TestMethod]
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void FormulaConstructor_TestValidTokenOther_Invalid()
+    {
+        _ = new Formula("1 , 2");
+    }
+
+
 }

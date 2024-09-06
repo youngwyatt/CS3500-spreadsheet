@@ -68,7 +68,7 @@ public class Formula
     ///   Accepted operators are +, *, /, and -. This pattern represents the 
     ///   valid operators.
     /// </summary>
-    private const string OperatorRegExPattern = "[+-/*]";
+    private const string OperatorRegExPattern = @"[\+\-\/\*]";
 
     ///<summary>
     ///  Private member variable for holding the parsed tokens to avoid 
