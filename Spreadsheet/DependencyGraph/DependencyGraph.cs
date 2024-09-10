@@ -54,19 +54,34 @@ namespace CS3500.DependencyGraph;
 /// </summary>
 public class DependencyGraph
 {
+    ///<summary>
+    /// private member variable for dependents Dictionary
+    /// </summary>
+    private Dictionary<string, HashSet<string>> dependents;
+
+    ///<summary>
+    /// private member variable for dependees Dictionary
+    /// </summary>
+    private Dictionary<string, HashSet<string>> dependees;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DependencyGraph"/> class.
     /// The initial DependencyGraph is empty.
     /// </summary>
     public DependencyGraph()
     {
-    }
+        this.dependents = new Dictionary<string, HashSet<string>>();
+        this.dependees = new Dictionary<string, HashSet<string>>();
+    } 
     /// <summary>
     /// The number of ordered pairs in the DependencyGraph.
     /// </summary>
     public int Size
     {
-        get { return 0; }
+        get 
+        { 
+            return dependents.Count; 
+        }
     }
     /// <summary>
     /// Reports whether the given node has dependents (i.e., other nodes depend on
@@ -76,7 +91,8 @@ public class DependencyGraph
     /// <returns> true if the node has dependents. </returns>
     public bool HasDependents(string nodeName)
     {
-        return false;
+        if (this.dependents.ContainsKey(nodeName)) { return true; }
+        else return false;
     }
     /// <summary>
     /// Reports whether the given node has dependees (i.e., depends on one or more
@@ -97,7 +113,12 @@ public class DependencyGraph
     /// <returns> The dependents of nodeName. </returns>
     public IEnumerable<string> GetDependents(string nodeName)
     {
-        return new List<string>(); // Choose your own data structure
+        HashSet<string>? returnDependents;
+        if (dependents.TryGetValue(nodeName, out returnDependents)) 
+        {
+            return returnDependents;
+        }
+        return new HashSet<string>();
     }
     /// <summary>
     /// <para>
@@ -124,6 +145,18 @@ public class DependencyGraph
     /// after dependee</param>
     public void AddDependency(string dependee, string dependent)
     {
+        // add to dependents
+        if (!dependents.ContainsKey(dependee))
+        {
+            dependents[dependee] = new HashSet<string>();
+        }
+        dependents[dependee].Add(dependent);
+        // add to dependees
+        if (!dependees.ContainsKey(dependent)) 
+        {
+            dependees[dependent] = new HashSet<string>();
+        }
+        dependees[dependent].Add(dependee);
     }
     /// <summary>
     /// <para>
