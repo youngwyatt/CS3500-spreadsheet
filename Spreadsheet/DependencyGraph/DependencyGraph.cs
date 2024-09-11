@@ -58,7 +58,6 @@ public class DependencyGraph
     /// private member variable for dependents Dictionary
     /// </summary>
     private Dictionary<string, HashSet<string>> dependents;
-
     ///<summary>
     /// private member variable for dependees Dictionary
     /// </summary>
@@ -79,8 +78,13 @@ public class DependencyGraph
     public int Size
     {
         get 
-        { 
-            return dependents.Count; 
+        {
+            int size = 0;
+            foreach (var pairs in dependents.Values) 
+            {
+                size += pairs.Count;
+            }
+            return size;
         }
     }
     /// <summary>
@@ -91,8 +95,7 @@ public class DependencyGraph
     /// <returns> true if the node has dependents. </returns>
     public bool HasDependents(string nodeName)
     {
-        if (this.dependents.ContainsKey(nodeName)) { return true; }
-        else return false;
+        if (dependents.ContainsKey(nodeName)) { return true; } else return false;
     }
     /// <summary>
     /// Reports whether the given node has dependees (i.e., depends on one or more
@@ -102,7 +105,7 @@ public class DependencyGraph
     /// <param name="nodeName">The name of the node.</param>
     public bool HasDependees(string nodeName)
     {
-        return false;
+        if(dependees.ContainsKey(nodeName)) { return true; } else return false;
     }
     /// <summary>
     /// <para>
@@ -113,8 +116,7 @@ public class DependencyGraph
     /// <returns> The dependents of nodeName. </returns>
     public IEnumerable<string> GetDependents(string nodeName)
     {
-        HashSet<string>? returnDependents;
-        if (dependents.TryGetValue(nodeName, out returnDependents)) 
+        if (dependents.TryGetValue(nodeName, out HashSet<string>? returnDependents)) 
         {
             return returnDependents;
         }
@@ -129,7 +131,11 @@ public class DependencyGraph
     /// <returns> The dependees of nodeName. </returns>
     public IEnumerable<string> GetDependees(string nodeName)
     {
-        return new List<string>(); // Choose your own data structure
+        if (dependees.TryGetValue(nodeName, out HashSet<string>? returnDependees))
+        {
+            return returnDependees;
+        }
+        return new HashSet<string>();
     }
     /// <summary>
     /// <para>Adds the ordered pair (dependee, dependent), if it doesn't
@@ -169,6 +175,26 @@ public class DependencyGraph
     /// after dependee</param>
     public void RemoveDependency(string dependee, string dependent)
     {
+        // remove from dependents
+        if (dependents.ContainsKey(dependee)) 
+        {
+            dependents[dependee].Remove(dependent);
+            // if hashset is now empty, remove key
+            if (dependents[dependee].Count == 0) 
+            {
+                dependents.Remove(dependee);
+            }
+        }
+        // remove from dependees
+        if(dependees.ContainsKey(dependent))
+        {
+            dependees[dependent].Remove(dependee);
+            if (dependees[dependent].Count == 0) 
+            {
+                dependees.Remove(dependent);
+            }
+        }
+    
     }
     /// <summary>
     /// Removes all existing ordered pairs of the form (nodeName, *). Then, for
@@ -180,6 +206,29 @@ public class DependencyGraph
     /// <param name="newDependents"> The new dependents for nodeName</param>
     public void ReplaceDependents(string nodeName, IEnumerable<string> newDependents)
     {
+        // remove nodeName from it's dependees
+        if (dependents.ContainsKey(nodeName)) 
+        {
+            foreach (var oldDependent in dependents[nodeName]) 
+            {
+                dependees[oldDependent].Remove(nodeName);
+                if (dependees[oldDependent].Count == 0) 
+                {
+                    dependents.Remove(oldDependent);
+                }
+            }
+        }
+        // replace dependents of nodeName with new dependents
+        dependents[nodeName] = new HashSet<string>(newDependents);
+        // add nodeName as dependee to its new dependents
+        foreach (var newDependent in newDependents) 
+        {
+            if (!dependees.ContainsKey(newDependent)) 
+            {
+                dependees[newDependent] = new HashSet<string>();
+            }
+            dependees[newDependent].Add(nodeName);
+        }
     }
     /// <summary>
     /// <para>
@@ -193,5 +242,28 @@ public class DependencyGraph
     /// <param name="newDependees"> The new dependees for nodeName</param>
     public void ReplaceDependees(string nodeName, IEnumerable<string> newDependees)
     {
+        // remove nodeName from it's dependents
+        if (dependees.ContainsKey(nodeName))
+        {
+            foreach (var oldDependee in dependees[nodeName])
+            {
+                dependents[oldDependee].Remove(nodeName);
+                if (dependents[oldDependee].Count == 0)
+                {
+                    dependents.Remove(oldDependee);
+                }
+            }
+        }
+        // replace dependees of nodeName with new dependees
+        dependees[nodeName] = new HashSet<string>(newDependees);
+        // add nodeName as dependent to its new dependees
+        foreach (var newDependee in newDependees)
+        {
+            if (!dependents.ContainsKey(newDependee))
+            {
+                dependents[newDependee] = new HashSet<string>();
+            }
+            dependents[newDependee].Add(nodeName);
+        }
     }
 }
