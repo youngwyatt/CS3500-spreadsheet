@@ -6,7 +6,7 @@
 // (Clarified names in solution/project structure)
 // Version 1.3 - H. James de St. Germain Fall 2024
 // <authors> Wyatt Young </authors>
-// <date> September 9th, 2024 </date>
+// <date> September 12th, 2024 </date>
 namespace CS3500.DependencyGraph;
 /// <summary>
 /// <para>

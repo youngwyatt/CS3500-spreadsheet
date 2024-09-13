@@ -8,31 +8,40 @@ using CS3500.DependencyGraph;
 public class DependencyGraphTests
 {
     /// <summary>
-    /// TODO: Explain carefully what this code tests.
-    /// Also, update in-line comments as appropriate.
+    /// This test is an overall stress test for the DependencyGraph test class
+    /// by simulating a large number of operations such as adding, removing, 
+    /// and replacing dependencies. It ensures the DependencyGraph maintains
+    /// consistency and accuracy under heavy loads validating the classes
+    /// integrity at a large scale.
     /// </summary>
     [TestMethod]
     [Timeout(2000)] // 2 second run time limit
     public void DependencyGraphConstructor_StressTestExample_Valid()
     {
-        DependencyGraph dg = new();
+        // creates DependencyGraph instance
+        DependencyGraph dg = new(); 
         // A bunch of strings to use
         // Initialize a size variable for keys of dependencies
         const int SIZE = 200;
+        // Intialize string array to hold node names
         string[] letters = new string[SIZE];
         for (int i = 0; i < SIZE; i++)
         {
+            // Generate variable names using single chars and index i cast to a char
             letters[i] = string.Empty + ((char)('a' + i));
         }
-        // The correct answers
+        // Initialize expected results for dependents and dependees
         HashSet<string>[] dependents = new HashSet<string>[SIZE];
         HashSet<string>[] dependees = new HashSet<string>[SIZE];
+        // Initialize empty sets for each dictionary through size
         for (int i = 0; i < SIZE; i++)
         {
             dependents[i] = [];
             dependees[i] = [];
         }
-        // Add a bunch of dependencies
+        // Add a bunch of dependencies into graph and expected sets
+        // Added in pairs (i, j) (dependee, dependent); pattern to be 
+        // repeated for each operation
         for (int i = 0; i < SIZE; i++)
         {
             for (int j = i + 1; j < SIZE; j++)
@@ -42,7 +51,7 @@ public class DependencyGraphTests
                 dependees[j].Add(letters[i]);
             }
         }
-        // Remove a bunch of dependencies
+        // Remove a bunch of dependencies in steps of 4
         for (int i = 0; i < SIZE; i++)
         {
             for (int j = i + 4; j < SIZE; j += 4)
@@ -52,7 +61,7 @@ public class DependencyGraphTests
                 dependees[j].Remove(letters[i]);
             }
         }
-        // Add some back
+        // For each node, add back dependencies in steps of 2
         for (int i = 0; i < SIZE; i++)
         {
             for (int j = i + 1; j < SIZE; j += 2)
@@ -62,7 +71,7 @@ public class DependencyGraphTests
                 dependees[j].Add(letters[i]);
             }
         }
-        // Remove some more
+        // For every other node, remove dependencies in steps of 3
         for (int i = 0; i < SIZE; i += 2)
         {
             for (int j = i + 3; j < SIZE; j += 3)
@@ -72,7 +81,7 @@ public class DependencyGraphTests
                 dependees[j].Remove(letters[i]);
             }
         }
-        // Make sure everything is right
+        // Assert expected results from separate HashSets and DependencyGraph object
         for (int i = 0; i < SIZE; i++)
         {
             Assert.IsTrue(dependents[i].SetEquals(new HashSet<string>(dg.GetDependents(letters[i]))));
@@ -83,17 +92,16 @@ public class DependencyGraphTests
     [TestMethod]
     public void HasDependents_SinglePair_Valid()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         dg.AddDependency("A", "B");
 
         Assert.IsTrue(dg.HasDependents("A"));
         Assert.IsFalse(dg.HasDependents("B"));
     }
-
     [TestMethod]
     public void HasDependees_SinglePair_Valid()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         dg.AddDependency("A", "B");
 
         Assert.IsTrue(dg.HasDependees("B"));
@@ -103,48 +111,44 @@ public class DependencyGraphTests
     [TestMethod]
     public void GetDependents_NonExistentPair_IsZero()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
 
         var dependents = dg.GetDependents("X");
 
         Assert.AreEqual(0, dependents.Count());
     }
-
     [TestMethod]
     public void GetDependees_NonExistentPair_IsZero()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         var dependees = dg.GetDependees("X");
 
         Assert.AreEqual(0, dependees.Count());
     }
-
     [TestMethod]
     public void GetDependents_SinglePair_TrueIsOne()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         dg.AddDependency("a", "b");
         var dependents = dg.GetDependents("a");
 
         Assert.IsTrue(dependents.Contains("b"));
         Assert.AreEqual(1, dependents.Count());
     }
-
     [TestMethod]
     public void GetDependees_SinglePair_IsOne()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         dg.AddDependency("a", "b");
         var dependees = dg.GetDependees("b");
 
         Assert.IsTrue(dependees.Contains("a"));
         Assert.AreEqual(1, dependees.Count());
     }
-
     [TestMethod]
     public void GetDependents_ManyPairs_IsFive()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         dg.AddDependency("a", "b");
         dg.AddDependency("a", "c");
         dg.AddDependency("a", "d");
@@ -155,11 +159,10 @@ public class DependencyGraphTests
         Assert.AreEqual(5, dependents.Count());
         CollectionAssert.AreEquivalent(new List<string> { "b", "c", "d", "e", "f"}, dependents.ToList());
     }
-
     [TestMethod]
     public void GetDependees_ManyPairs_IsFive()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         dg.AddDependency("a", "b");
         dg.AddDependency("c", "b");
         dg.AddDependency("d", "b");
@@ -175,7 +178,7 @@ public class DependencyGraphTests
     [TestMethod]
     public void Size_AddsRemovesReplace_IsNine() 
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         // Adding dependencies
         dg.AddDependency("A", "B");
         dg.AddDependency("A", "C");
@@ -205,7 +208,7 @@ public class DependencyGraphTests
     [TestMethod]
     public void AddDependency_OnePair_Equivalent()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         dg.AddDependency("a", "b");
         var dependentsOfA = dg.GetDependents("a");
         var dependeesOfB = dg.GetDependees("b");
@@ -219,7 +222,7 @@ public class DependencyGraphTests
     [TestMethod]
     public void AddDependency_MultipleDependents_Equivalent()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         dg.AddDependency("a", "b");
         dg.AddDependency("a", "c");
         var dependentsOfA = dg.GetDependents("a");
@@ -231,7 +234,8 @@ public class DependencyGraphTests
     [TestMethod]
     public void AddDependency_ManyPairsOneCycle_EquivalentOrZero()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
+        // add a couple dependencies to ensure general structure of graph is correct
         dg.AddDependency("a", "b");
         dg.AddDependency("a", "c");
         dg.AddDependency("b", "d");
@@ -255,11 +259,21 @@ public class DependencyGraphTests
         CollectionAssert.AreEquivalent(new List<string> { "a" }, dependeesOfC.ToList());
         CollectionAssert.AreEquivalent(new List<string> { "b", "d" }, dependeesOfD.ToList());
     }
+    [TestMethod]
+    public void AddDependency_Duplicate_NoChangeInSize()
+    {
+        DependencyGraph dg = new DependencyGraph();
+        dg.AddDependency("A", "B");
+        // add the same dependency again
+        dg.AddDependency("A", "B");
+        Assert.AreEqual(1, dg.Size);
+        CollectionAssert.AreEquivalent(new List<string> { "B" }, dg.GetDependents("A").ToList());
+    }
     // --- RemoveDependency Tests ---
     [TestMethod]
     public void RemoveDependency_AddPairRemovePair_IsZero()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         dg.AddDependency("A", "B");
         dg.RemoveDependency("A", "B");
         var dependentsOfA = dg.GetDependents("A");
@@ -269,11 +283,10 @@ public class DependencyGraphTests
         Assert.AreEqual(0, dependentsOfA.Count());
         Assert.AreEqual(0, dependeesOfB.Count());
     }
-
     [TestMethod]
     public void RemoveDependency_AddRemoveAddAgain_IsZero()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         dg.AddDependency("A", "B");
         dg.RemoveDependency("A", "B");
         dg.AddDependency("A", "C");
@@ -284,11 +297,24 @@ public class DependencyGraphTests
         CollectionAssert.AreEquivalent(new List<string> { "C", "D" }, dependentsOfA.ToList());
         Assert.AreEqual(0, dependeesOfB.Count());
     }
+    [TestMethod]
+    public void RemoveDependency_NonExistent_NoChange()
+    {
+        DependencyGraph dg = new();
+        dg.AddDependency("A", "B");
+        dg.AddDependency("B", "C");
+        // attempt to remove a non-existent dependency
+        dg.RemoveDependency("C", "D");
+        // size should remain the same since (C, D) was never added
+        Assert.AreEqual(2, dg.Size);
+        CollectionAssert.AreEquivalent(new List<string> { "B" }, dg.GetDependents("A").ToList());
+        CollectionAssert.AreEquivalent(new List<string> { "A" }, dg.GetDependees("B").ToList());
+    }
     // --- ReplaceDependents Tests ---
     [TestMethod]
     public void ReplaceDependents_OneReplace_Equivalent()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         dg.AddDependency("A", "B");
         dg.AddDependency("A", "C");
         dg.ReplaceDependents("A", new List<string> { "D", "E" });
@@ -300,11 +326,25 @@ public class DependencyGraphTests
         // Check D has A as dependee
         CollectionAssert.AreEquivalent(new List<string> { "A" }, dg.GetDependees("D").ToList());
     }
+    [TestMethod]
+    public void ReplaceDependents_EmptySet_RemovesAllDependents()
+    {
+        DependencyGraph dg = new();
+        dg.AddDependency("A", "B");
+        dg.AddDependency("A", "C");
+        // replace dependents of A with an empty set
+        dg.ReplaceDependents("A", new List<string>());
+        // ensure A has no dependents, vica versa for B and C dependees
+        Assert.AreEqual(0, dg.GetDependents("A").Count());
+        Assert.AreEqual(0, dg.GetDependees("B").Count());
+        Assert.AreEqual(0, dg.GetDependees("C").Count());
+        Assert.AreEqual(0, dg.Size);
+    }
     // --- ReplaceDependees Tests ---
     [TestMethod]
     public void ReplaceDependees_OneReplace_Equivalent()
     {
-        DependencyGraph dg = new DependencyGraph();
+        DependencyGraph dg = new();
         dg.AddDependency("B", "A");
         dg.AddDependency("C", "A");
         dg.ReplaceDependees("A", new List<string> { "D", "E" });
@@ -316,5 +356,4 @@ public class DependencyGraphTests
         // Check D has A as dependent
         CollectionAssert.AreEquivalent(new List<string> { "A" }, dg.GetDependents("D").ToList());
     }
-
 }
