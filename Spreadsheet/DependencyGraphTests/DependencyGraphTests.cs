@@ -199,7 +199,7 @@ public class DependencyGraphTests
         // Replacing dependents for node A 
         dg.ReplaceDependents("A", new List<string> { "X", "Y" });
         // 9 dependencies
-        Assert.AreEqual(8, dg.Size);
+        Assert.AreEqual(9, dg.Size);
     }
     // --- AddDependency Tests ---
     [TestMethod]

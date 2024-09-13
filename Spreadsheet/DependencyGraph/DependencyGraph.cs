@@ -5,6 +5,8 @@
 // (Clarified meaning of dependent and dependee)
 // (Clarified names in solution/project structure)
 // Version 1.3 - H. James de St. Germain Fall 2024
+// <authors> Wyatt Young </authors>
+// <date> September 9th, 2024 </date>
 namespace CS3500.DependencyGraph;
 /// <summary>
 /// <para>
@@ -206,28 +208,18 @@ public class DependencyGraph
     /// <param name="newDependents"> The new dependents for nodeName</param>
     public void ReplaceDependents(string nodeName, IEnumerable<string> newDependents)
     {
-        // remove nodeName from it's dependees
-        if (dependents.ContainsKey(nodeName)) 
+        if (dependents.ContainsKey(nodeName))
         {
-            foreach (var oldDependent in dependents[nodeName]) 
+            // remove nodeName from it's dependees
+            foreach (string oldDependee in dependents[nodeName])
             {
-                dependees[oldDependent].Remove(nodeName);
-                if (dependees[oldDependent].Count == 0) 
-                {
-                    dependents.Remove(oldDependent);
-                }
+                RemoveDependency(nodeName, oldDependee);
             }
-        }
-        // replace dependents of nodeName with new dependents
-        dependents[nodeName] = new HashSet<string>(newDependents);
-        // add nodeName as dependee to its new dependents
-        foreach (var newDependent in newDependents) 
-        {
-            if (!dependees.ContainsKey(newDependent)) 
+            // replace dependents of nodeName with new dependents
+            foreach (string dependent in newDependents)
             {
-                dependees[newDependent] = new HashSet<string>();
+                AddDependency(nodeName, dependent);
             }
-            dependees[newDependent].Add(nodeName);
         }
     }
     /// <summary>
@@ -242,28 +234,18 @@ public class DependencyGraph
     /// <param name="newDependees"> The new dependees for nodeName</param>
     public void ReplaceDependees(string nodeName, IEnumerable<string> newDependees)
     {
-        // remove nodeName from it's dependents
         if (dependees.ContainsKey(nodeName))
         {
-            foreach (var oldDependee in dependees[nodeName])
+            // remove nodeName from it's dependendents
+            foreach (string oldDependent in dependees[nodeName])
             {
-                dependents[oldDependee].Remove(nodeName);
-                if (dependents[oldDependee].Count == 0)
-                {
-                    dependents.Remove(oldDependee);
-                }
+                RemoveDependency(oldDependent, nodeName);
             }
-        }
-        // replace dependees of nodeName with new dependees
-        dependees[nodeName] = new HashSet<string>(newDependees);
-        // add nodeName as dependent to its new dependees
-        foreach (var newDependee in newDependees)
-        {
-            if (!dependents.ContainsKey(newDependee))
+            // replace dependees of nodeName with new dependees
+            foreach (string dependee in newDependees)
             {
-                dependents[newDependee] = new HashSet<string>();
+                AddDependency(dependee, nodeName);
             }
-            dependents[newDependee].Add(nodeName);
         }
     }
 }
