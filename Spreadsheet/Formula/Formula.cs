@@ -1,6 +1,8 @@
 ﻿// <copyright file="Formula_PS2.cs" company="UofU-CS3500">
 // Copyright (c) 2024 UofU-CS3500. All rights reserved.
 // </copyright>
+// <authors> Wyatt Young </authors>
+// <date> September 14th, 2024 </date>
 // <summary>
 //   <para>
 //     This code is provides to start your assignment.  It was written
@@ -21,6 +23,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.Text;
+using System.Linq;
 
 /// <summary>
 ///   <para>
@@ -169,12 +172,12 @@ public class Formula
             {
                 // use double.ToString for numbers
                 double temp = double.Parse(token);
-                canonicalForm.Append(temp.ToString()); 
+                canonicalForm.Append(temp.ToString());
             }
             else if (IsVar(token))
             {
                 // normalize variables to uppercase
-                canonicalForm.Append(token.ToUpper()); 
+                canonicalForm.Append(token.ToUpper());
             }
             else
             {
@@ -190,7 +193,7 @@ public class Formula
             throw new FormulaFormatException("Parenthesis unbalanced");
         }
         // check last token rule
-        if (prevToken != ")" && prevToken != null && !IsVar(prevToken) && !IsNum(prevToken)) 
+        if (prevToken != ")" && prevToken != null && !IsVar(prevToken) && !IsNum(prevToken))
         {
             throw new FormulaFormatException("Invalid last token: " + prevToken.ToString());
         }
@@ -219,15 +222,238 @@ public class Formula
     {
         HashSet<string> returnVars = new HashSet<string>();
         // loop through each token and store variables
-        foreach (string token in allTokens) 
+        foreach (string token in allTokens)
         {
             // if token is variable, normalize to uppercase then add to HashSet
-            if (IsVar(token)) 
+            if (IsVar(token))
             {
                 returnVars.Add(token.ToUpper());
             }
         }
         return returnVars;
+    }
+
+    /// <summary>
+    /// <para>
+    /// Reports whether f1 == f2, using the notion of equality from the <see cref="Equals"/> method.
+    /// </para>
+    /// </summary>
+    /// <param name="f1"> The first of two formula objects. </param>
+    /// <param name="f2"> The second of two formula objects. </param>
+    /// <returns> true if the two formulas are the same.</returns>
+    public static bool operator ==(Formula f1, Formula f2)
+    {
+        // FIXME: Write this method
+        throw new NotImplementedException();
+    }
+    /// <summary>
+    /// <para>
+    /// Reports whether f1 != f2, using the notion of equality from the <see cref="Equals"/> method.
+    /// </para>
+    /// </summary>
+    /// <param name="f1"> The first of two formula objects. </param>
+    /// <param name="f2"> The second of two formula objects. </param>
+    /// <returns> true if the two formulas are not equal to each other.</returns>
+    public static bool operator !=(Formula f1, Formula f2)
+    {
+        // FIXME: Write this method
+        throw new NotImplementedException();
+    }
+    /// <summary>
+    /// <para>
+    /// Determines if two formula objects represent the same formula.
+    /// </para>
+    /// <para>
+    /// By definition, if the parameter is null or does not reference
+    /// a Formula Object then return false.
+    /// </para>
+    /// <para>
+    /// Two Formulas are considered equal if their canonical string representations
+    /// (as defined by ToString) are equal.
+    /// </para>
+    /// </summary>
+    /// <param name="obj"> The other object.</param>
+    /// <returns>
+    /// True if the two objects represent the same formula.
+    /// </returns>
+    public override bool Equals(object? obj)
+    {
+        return this.ToString() == obj.ToString();
+    }
+    /// <summary>
+    /// <para>
+    /// Evaluates this Formula, using the lookup delegate to determine the values of
+    /// variables.
+    /// </para>
+    /// <remarks>
+    /// When the lookup method is called, it will always be passed a normalized(capitalized)
+    /// variable name. The lookup method will throw an ArgumentException if there is
+    /// not a definition for that variable token.
+    /// </remarks>
+    /// <para>
+    /// If no undefined variables or divisions by zero are encountered when evaluating
+    /// this Formula, the numeric value of the formula is returned. Otherwise, a
+    /// FormulaError is returned (with a meaningful explanation as the Reason property).
+    /// </para>
+    /// <para>
+    /// This method should never throw an exception.
+    /// </para>
+    /// </summary>
+    /// <param name="lookup">
+    /// <para>
+    /// Given a variable symbol as its parameter, lookup returns the variable's value
+    /// (if it has one) or throws an ArgumentException (otherwise). This method will expect
+    /// variable names to be normalized.
+    /// </para>
+    /// </param>
+    /// <returns> Either a double or a FormulaError, based on evaluating the formula.</returns>
+    public object Evaluate(Lookup lookup)
+    {
+        // two stacks for operators and values
+        Stack<double> valueStack = new Stack<double>();
+        Stack<string> operatorStack = new Stack<string>();
+        foreach (string token in allTokens)
+        {
+            // token is a number
+            if (IsNum(token))
+            {
+                double newVal;
+                double currVal = double.Parse(token);
+                if (operatorStack.Peek() == "*")
+                {
+                    operatorStack.Pop();
+                    newVal = valueStack.Pop() * currVal;
+                }
+                else if (operatorStack.Peek() == "/")
+                {
+                    // avoid division by zero
+                    if (currVal == 0) { return new FormulaError("Division by 0"); }
+                    operatorStack.Pop();
+                    newVal = valueStack.Pop() / currVal;
+                }
+                else { newVal = currVal; }
+                // push result to val stack
+                valueStack.Push(newVal);
+            }
+            // token is a variable
+            else if (IsVar(token)) 
+            {
+                double newVal;
+                // lookup variable to be evaluated, if not delegate is thrown
+                double lookupVar = lookup(token);
+                if (operatorStack.Peek() == "*")
+                {
+                    operatorStack.Pop();
+                    newVal = valueStack.Pop() * lookupVar;
+                }
+                else if (operatorStack.Peek() == "/")
+                {
+                    // avoid division by zero
+                    if (lookupVar ==  0) { return new FormulaError("Division by 0"); }
+                    operatorStack.Pop();
+                    newVal = valueStack.Pop() / lookupVar;
+                }
+                else { newVal = lookupVar; }
+                // push result to val stack
+                valueStack.Push(newVal);
+            }
+            // token is a + or -
+            else if (token == "+" || token == "-") 
+            {
+                // check operator stack for + or - and evaluate accordingly
+                if (operatorStack.Peek() == "+")
+                {
+                    operatorStack.Pop();
+                    double currVal = valueStack.Pop();
+                    double prevVal = valueStack.Pop();
+                    valueStack.Push(prevVal + currVal);
+                }
+                else if (operatorStack.Peek() == "-") 
+                {
+                    operatorStack.Pop();
+                    double currVal = valueStack.Pop();
+                    double prevVal = valueStack.Pop();
+                    valueStack.Push(prevVal - currVal);
+                }
+                // if not + or - simply push token onto operator stack
+                else {operatorStack.Push(token); }
+            }
+            // token is / or * or ( push onto operator stack
+            else if (token == "*" || token == "/" || token == "(") { operatorStack.Push(token); }
+            // token is a )
+            else if (token == ")") 
+            {
+                // if + or - is on operator stack
+                if (operatorStack.Peek() == "+")
+                {
+                    operatorStack.Pop();
+                    double currVal = valueStack.Pop();
+                    double prevVal = valueStack.Pop();
+                    valueStack.Push(prevVal + currVal);
+                }
+                else if (operatorStack.Peek() == "-")
+                {
+                    operatorStack.Pop();
+                    double currVal = valueStack.Pop();
+                    double prevVal = valueStack.Pop();
+                    valueStack.Push(prevVal - currVal);
+                }
+                // now top of operator stack will be (, pop it
+                operatorStack.Pop();
+                // if * or / is on operator stack
+                if (operatorStack.Peek() == "*")
+                {
+                    operatorStack.Pop();
+                    double currVal = valueStack.Pop();
+                    double prevVal = valueStack.Pop();
+                    valueStack.Push(prevVal * currVal);
+                }
+                else if (operatorStack.Peek() == "/")
+                {
+                    operatorStack.Pop();
+                    double currVal = valueStack.Pop();
+                    double prevVal = valueStack.Pop();
+                    // avoid division by zero
+                    if (currVal == 0) { return new FormulaError("Division by 0"); }
+                    valueStack.Push(prevVal / currVal);
+                }
+            }
+        }
+        // once last token has been processed check if operator stack is empty
+        // if empty return final value
+        if (operatorStack.Count == 0) { return valueStack.Pop(); }
+        // if not empty, will be a + or -, apply last operator to remaining values and return
+        else 
+        {
+            if (operatorStack.Peek() == "+")
+            {
+                operatorStack.Pop();
+                double currVal = valueStack.Pop();
+                double prevVal = valueStack.Pop();
+                return prevVal + currVal;
+            }
+            else
+            {
+                operatorStack.Pop();
+                double currVal = valueStack.Pop();
+                double prevVal = valueStack.Pop();
+                return prevVal - currVal;
+            }
+        }
+    }
+    /// <summary>
+    /// <para>
+    /// Returns a hash code for this Formula. If f1.Equals(f2), then it must be the
+    /// case that f1.GetHashCode() == f2.GetHashCode(). Ideally, the probability that two
+    /// randomly-generated unequal Formulas have the same hash code should be
+    /// extremely small.
+    /// </para>
+    /// </summary>
+    /// <returns> The hashcode for the object. </returns>
+    public override int GetHashCode()
+    {
+        // FIXME: Implement the required algorithm here.
+        throw new NotImplementedException();
     }
 
     /// <summary>
@@ -368,9 +594,44 @@ public class FormulaFormatException : Exception
     ///   </para>
     /// </summary>
     /// <param name="message"> A developer defined message describing why the exception occured.</param>
-    public FormulaFormatException(string message)
-        : base(message)
+    public FormulaFormatException(string message) : base(message)
     {
         // All this does is call the base constructor. No extra code needed.
     }
 }
+
+/// <summary>
+/// Used as a possible return value of the Formula.Evaluate method.
+/// </summary>
+public class FormulaError
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FormulaError"/> class.
+    /// <para>
+    /// Constructs a FormulaError containing the explanatory reason.
+    /// </para>
+    /// </summary>
+    /// <param name="message"> Contains a message for why the error occurred.</param>
+    public FormulaError(string message)
+    {
+        Reason = message;
+    }
+    /// <summary>
+    /// Gets the reason why this FormulaError was created.
+    /// </summary>
+    public string Reason { get; private set; }
+}
+/// <summary>
+/// Any method meeting this type signature can be used for
+/// looking up the value of a variable.
+/// </summary>
+/// <exception cref="ArgumentException">
+/// If a variable name is provided that is not recognized by the implementing method,
+/// then the method should throw an ArgumentException.
+/// </exception>
+/// <param name="variableName">
+/// The name of the variable (e.g., "A1") to lookup.
+/// </param>
+/// <returns> The value of the given variable (if one exists). </returns>
+public delegate double Lookup(string variableName);
+
