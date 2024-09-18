@@ -1,8 +1,8 @@
 // <copyright file="FormulaSyntaxTests.cs" company="UofU-CS3500">
 //   Copyright 2024 UofU-CS3500. All rights reserved.
 // </copyright>
-// <authors> [Wyatt Young] </authors>
-// <date> [August 21, 2024] </date>
+// <authors> Wyatt Young </authors>
+// <date> September 18th, 2024 </date>
 
 namespace CS3500.FormulaTests;
 

@@ -1,8 +1,6 @@
 ﻿// <copyright file="Formula_PS2.cs" company="UofU-CS3500">
 // Copyright (c) 2024 UofU-CS3500. All rights reserved.
 // </copyright>
-// <authors> Wyatt Young </authors>
-// <date> September 18th, 2024 </date>
 // <summary>
 //   <para>
 //     This code is provides to start your assignment.  It was written
@@ -15,6 +13,8 @@
 //     to represent your work and any changes you make.
 //   </para>
 // </summary>
+// <authors> Wyatt Young </authors>
+// <date> September 18th, 2024 </date>
 
 
 namespace CS3500.Formula;
