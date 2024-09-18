@@ -241,11 +241,12 @@ public class DependencyGraph
             {
                 RemoveDependency(oldDependent, nodeName);
             }
-            // replace dependees of nodeName with new dependees
-            foreach (string dependee in newDependees)
-            {
-                AddDependency(dependee, nodeName);
-            }
         }
+        // replace dependees of nodeName with new dependees
+        foreach (string dependee in newDependees)
+        {
+            AddDependency(dependee, nodeName);
+        }
+        
     }
 }

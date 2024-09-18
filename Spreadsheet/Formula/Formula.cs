@@ -243,8 +243,7 @@ public class Formula
     /// <returns> true if the two formulas are the same.</returns>
     public static bool operator ==(Formula f1, Formula f2)
     {
-        // FIXME: Write this method
-        throw new NotImplementedException();
+        return f1.ToString().Equals(f2.ToString());
     }
     /// <summary>
     /// <para>
@@ -256,8 +255,7 @@ public class Formula
     /// <returns> true if the two formulas are not equal to each other.</returns>
     public static bool operator !=(Formula f1, Formula f2)
     {
-        // FIXME: Write this method
-        throw new NotImplementedException();
+        return !(f1 == f2);
     }
     /// <summary>
     /// <para>
@@ -278,7 +276,8 @@ public class Formula
     /// </returns>
     public override bool Equals(object? obj)
     {
-        return this.ToString() == obj.ToString();
+        if (obj == null) return false;
+        else return this.ToString() == obj.ToString();
     }
     /// <summary>
     /// <para>
@@ -317,66 +316,53 @@ public class Formula
             // token is a number
             if (IsNum(token))
             {
-                double newVal;
                 double currVal = double.Parse(token);
-                if (operatorStack.Peek() == "*")
+                if (IsOnTop(operatorStack, "*") || IsOnTop(operatorStack, "/"))
                 {
-                    operatorStack.Pop();
-                    newVal = valueStack.Pop() * currVal;
+                    double result;
+                    if (!TryApplyOperator(operatorStack, valueStack, currVal, out result))
+                    {
+                        return new FormulaError("Division by 0");
+                    }
+                    valueStack.Push(result);
                 }
-                else if (operatorStack.Peek() == "/")
+                else
                 {
-                    // avoid division by zero
-                    if (currVal == 0) { return new FormulaError("Division by 0"); }
-                    operatorStack.Pop();
-                    newVal = valueStack.Pop() / currVal;
+                    valueStack.Push(currVal);
                 }
-                else { newVal = currVal; }
-                // push result to val stack
-                valueStack.Push(newVal);
             }
             // token is a variable
             else if (IsVar(token)) 
             {
-                double newVal;
-                // lookup variable to be evaluated, if not delegate is thrown
                 double lookupVar = lookup(token);
-                if (operatorStack.Peek() == "*")
+                // check for * or / on operator stack
+                if (IsOnTop(operatorStack, "*") || IsOnTop(operatorStack, "/"))
                 {
-                    operatorStack.Pop();
-                    newVal = valueStack.Pop() * lookupVar;
+                    // if * or / evaluate result
+                    double result;
+                    if (!TryApplyOperator(operatorStack, valueStack, lookupVar, out result))
+                    {
+                        return new FormulaError("Division by 0");
+                    }
+                    valueStack.Push(result);
                 }
-                else if (operatorStack.Peek() == "/")
+                else
                 {
-                    // avoid division by zero
-                    if (lookupVar ==  0) { return new FormulaError("Division by 0"); }
-                    operatorStack.Pop();
-                    newVal = valueStack.Pop() / lookupVar;
+                    valueStack.Push(lookupVar);
                 }
-                else { newVal = lookupVar; }
-                // push result to val stack
-                valueStack.Push(newVal);
             }
             // token is a + or -
             else if (token == "+" || token == "-") 
             {
                 // check operator stack for + or - and evaluate accordingly
-                if (operatorStack.Peek() == "+")
+                if (IsOnTop(operatorStack, "+") || IsOnTop(operatorStack, "-"))
                 {
-                    operatorStack.Pop();
-                    double currVal = valueStack.Pop();
-                    double prevVal = valueStack.Pop();
-                    valueStack.Push(prevVal + currVal);
-                }
-                else if (operatorStack.Peek() == "-") 
-                {
-                    operatorStack.Pop();
-                    double currVal = valueStack.Pop();
-                    double prevVal = valueStack.Pop();
-                    valueStack.Push(prevVal - currVal);
+                    double result;
+                    TryApplyOperator(operatorStack, valueStack, null, out result);
+                    valueStack.Push(result);
                 }
                 // if not + or - simply push token onto operator stack
-                else {operatorStack.Push(token); }
+                operatorStack.Push(token); 
             }
             // token is / or * or ( push onto operator stack
             else if (token == "*" || token == "/" || token == "(") { operatorStack.Push(token); }
@@ -384,38 +370,26 @@ public class Formula
             else if (token == ")") 
             {
                 // if + or - is on operator stack
-                if (operatorStack.Peek() == "+")
+                if (IsOnTop(operatorStack, "+") || IsOnTop(operatorStack, "-"))
                 {
-                    operatorStack.Pop();
-                    double currVal = valueStack.Pop();
-                    double prevVal = valueStack.Pop();
-                    valueStack.Push(prevVal + currVal);
-                }
-                else if (operatorStack.Peek() == "-")
-                {
-                    operatorStack.Pop();
-                    double currVal = valueStack.Pop();
-                    double prevVal = valueStack.Pop();
-                    valueStack.Push(prevVal - currVal);
+                    double result;
+                    TryApplyOperator(operatorStack, valueStack, null, out result);
+                    valueStack.Push(result);
                 }
                 // now top of operator stack will be (, pop it
-                operatorStack.Pop();
-                // if * or / is on operator stack
-                if (operatorStack.Peek() == "*")
+                if (IsOnTop(operatorStack, "(")) 
                 {
                     operatorStack.Pop();
-                    double currVal = valueStack.Pop();
-                    double prevVal = valueStack.Pop();
-                    valueStack.Push(prevVal * currVal);
                 }
-                else if (operatorStack.Peek() == "/")
+                // if * or / is on operator stack
+                if (IsOnTop(operatorStack, "*") || IsOnTop(operatorStack, "/"))
                 {
-                    operatorStack.Pop();
-                    double currVal = valueStack.Pop();
-                    double prevVal = valueStack.Pop();
-                    // avoid division by zero
-                    if (currVal == 0) { return new FormulaError("Division by 0"); }
-                    valueStack.Push(prevVal / currVal);
+                    double result;
+                    if (!TryApplyOperator(operatorStack, valueStack, null,  out result))
+                    {
+                        return new FormulaError("Division by 0");
+                    }
+                    valueStack.Push(result);
                 }
             }
         }
@@ -425,21 +399,52 @@ public class Formula
         // if not empty, will be a + or -, apply last operator to remaining values and return
         else 
         {
-            if (operatorStack.Peek() == "+")
-            {
-                operatorStack.Pop();
-                double currVal = valueStack.Pop();
-                double prevVal = valueStack.Pop();
-                return prevVal + currVal;
-            }
-            else
-            {
-                operatorStack.Pop();
-                double currVal = valueStack.Pop();
-                double prevVal = valueStack.Pop();
-                return prevVal - currVal;
-            }
+            double result;
+            TryApplyOperator(operatorStack, valueStack, null, out result);
+            return result;
         }
+    }
+    ///<summary>
+    ///private helper method to peek and check operator type
+    /// </summary>
+    /// <returns>
+    /// returns true if operator stack is not empty and the operator specified is on top
+    /// </returns>
+    private static bool IsOnTop(Stack<string> operatorStack, string op) 
+    {
+        return operatorStack.Count != 0 && operatorStack.Peek() == op;
+    }
+    ///<summary>
+    ///private helper method for evaulating operators
+    ///</summary>
+    private static bool TryApplyOperator(Stack<string> operatorStack, Stack<double> valueStack, double? currVal, out double result) 
+    {
+        if (currVal == null) currVal = valueStack.Pop();
+        double castCurrVal = (double)currVal;
+        double prevVal = valueStack.Pop();
+        string op = operatorStack.Pop();
+        result = 0;
+        if (op == "+")
+        {
+            result = prevVal + castCurrVal;
+        }
+        else if (op == "-")
+        {
+            result = prevVal - castCurrVal;
+        }
+        else if (op == "*")
+        {
+            result = prevVal * castCurrVal;
+        }
+        else if (op == "/")
+        {
+            if (currVal == 0)
+            {
+                return false; // Division by zero error
+            }
+            result = prevVal / castCurrVal;
+        }
+        return true;
     }
     /// <summary>
     /// <para>
@@ -452,8 +457,7 @@ public class Formula
     /// <returns> The hashcode for the object. </returns>
     public override int GetHashCode()
     {
-        // FIXME: Implement the required algorithm here.
-        throw new NotImplementedException();
+        return this.ToString().GetHashCode();
     }
 
     /// <summary>

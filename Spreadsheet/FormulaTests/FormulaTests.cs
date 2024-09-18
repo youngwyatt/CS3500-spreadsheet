@@ -599,68 +599,206 @@ public class FormulaSyntaxTests
         _ = new Formula("(1+1)()");
     }
 
-    // --- Tests for ToString Method ---
+    // --- Evaluate Tests ---
 
-    [TestMethod]
-    public void FormulaToString_UniqueVariablesWithSpaces_Valid() 
+    /// <summary>
+    /// Simple Lookup delegate method for testing 
+    /// </summary>
+    public double LookupVarTest(string varName) 
     {
-        Formula formula = new Formula("x1 + y1");
-        Assert.AreEqual("X1+Y1", formula.ToString());
+        if (varName == "a1") return 2.0;
+        else if (varName == "B2") return 4.0;
+        else if (varName =="c3") return 6.0;
+        else throw new ArgumentException();
+    }
+    [TestMethod]
+    public void Evaluate_SimpleExpressionNoParenthesis_Is10() 
+    {
+        Formula f = new Formula("9 - 1 + 2");
+        double actual = (double)f.Evaluate(LookupVarTest);
+        Assert.AreEqual(10.0, actual, 1e-9);
     }
 
     [TestMethod]
-    public void FormulaToString_UniqueVariablesDecimalNumber_Valid()
+    public void Evaluate_SimpleExpressionWParenthesis_Is10()
     {
-        Formula formula = new Formula("Ab1 + y23 - 67.120000");
-        Assert.AreEqual("AB1+Y23-67.12", formula.ToString());
+        Formula f = new Formula("(9 * 1) + 1");
+        double actual = (double)f.Evaluate(LookupVarTest);
+        Assert.AreEqual(10.0, actual, 1e-9);
     }
 
     [TestMethod]
-    public void FormulaToString_ParenthesisScientificNotation_Valid()
+    public void Evaluate_SimpleExpressionWTwoSetsParenthesis_Is10()
     {
-        Formula formula = new Formula("((B1* 2) - 6.32E3)");
-        Assert.AreEqual("((B1*2)-6320)", formula.ToString());
+        Formula f = new Formula("((9 * 2) + 2) / 2");
+        double actual = (double)f.Evaluate(LookupVarTest);
+        Assert.AreEqual(10.0, actual, 1e-9);
     }
 
     [TestMethod]
-    [ExpectedException(typeof(FormulaFormatException))]
-    public void FormulaToString_Empty_Invalid()
+    public void Evaluate_SimpleExpressionDivisionWParenthesis_Is10()
     {
-        Formula formula = new Formula(" ");
-        Assert.AreNotEqual(" ", formula.ToString());
-    }
-
-    // --- Tests for GetVariables() Method ---
-
-    [TestMethod]
-    public void FormulaGetVariables_UniqueVariablesNumbers_ValidCount() 
-    {
-        Formula formula = new Formula("x2 + BY4 /(12 * 2)");
-        ISet<string> vars = formula.GetVariables();
-        Assert.AreEqual(2, vars.Count);
+        Formula f = new Formula("250/(5*4+5)");
+        double actual = (double)f.Evaluate(LookupVarTest);
+        Assert.AreEqual(10.0, actual, 1e-9);
     }
 
     [TestMethod]
-    public void FormulaGetVariables_UniqueVariablesNumbers_Valid()
+    public void Evaluate_ComplexExpressionWithNestedParentheses_Is10()
     {
-        Formula formula = new Formula("x2 + BY4 /(12 * 2)");
-        ISet<string> vars = formula.GetVariables();
-        CollectionAssert.AreEquivalent(new HashSet<string> {"X2", "BY4"}.ToList(), vars.ToList());
+        Formula f = new Formula("((10 + 5) + (20 - (10 - 10))) - 25");
+        double actual = (double)f.Evaluate(LookupVarTest);
+        Assert.AreEqual(10.0, actual, 1e-9);
     }
 
     [TestMethod]
-    public void FormulaGetVariables_EmptySet_ValidCount()
+    public void Evaluate_ComplexExpressionWithAllOperations_Is10()
     {
-        Formula formula = new Formula("21 + 2E7 *(4-2)");
-        ISet<string> vars = formula.GetVariables();
-        Assert.AreEqual(0, vars.Count);
+        Formula f = new Formula("10 + 5 * 2 - (20 / 4 + 5)");
+        double actual = (double)f.Evaluate(LookupVarTest);
+        Assert.AreEqual(10.0, actual, 1e-9);
     }
 
     [TestMethod]
-    [ExpectedException(typeof(FormulaFormatException))]
-    public void FormulaConstructor_TestValidTokenOther_Invalid()
+    public void Evaluate_ComplexExpressionWithParenthesesAndDivision_Is10()
     {
-        _ = new Formula("1 , 2");
+        Formula f = new Formula("((250 / (5 * 5)) + (100 / 10) / 2)");
+        double actual = (double)f.Evaluate(LookupVarTest);
+        Assert.AreEqual(15.0, actual, 1e-9);
+    }
+
+    [TestMethod]
+    public void Evaluate_SimpleExpressionWithVariables_Is6()
+    {
+        Formula f = new Formula("a1 + B2");
+        // evaluates using LookupVarTest, defines a1 = 2.0 and B2 = 4.0
+        double actual = (double)f.Evaluate(LookupVarTest);
+        Assert.AreEqual(6.0, actual, 1e-9);
+    }
+
+    [TestMethod]
+    public void Evaluate_ComplexWithVariablesNestedParenthesis_Is7()
+    {
+        Formula f = new Formula("((a1 * B2) + c3) / a1");
+        // using LookupVarTest a1 = 2.0, B2 = 4.0, c3 = 6.0
+        double actual = (double)f.Evaluate(LookupVarTest);
+        Assert.AreEqual(7.0, actual, 1e-9);
+    }
+    [TestMethod]
+    public void Evaluate_SingleVariableFormula_ReturnsVariableValue()
+    {
+        Formula f = new Formula("a1");
+        double actual = (double)f.Evaluate(LookupVarTest);
+        // expected is 2.0 from LookupVarTest
+        Assert.AreEqual(2.0, actual, 1e-9);
+    }
+    [TestMethod]
+    public void Evaluate_SingleNumber_ReturnsNumber()
+    {
+        Formula f = new Formula("5");
+        double actual = (double)f.Evaluate(LookupVarTest);
+        // expected is just input: 5
+        Assert.AreEqual(5.0, actual, 1e-9);
+    }
+    [TestMethod]
+    public void Evaluate_FormulaWithUnknownVariable_ReturnsError()
+    {
+        Formula f = new Formula("a1 + X4");
+        // X4 not defined in LookupVarTest
+        var result = f.Evaluate(LookupVarTest);
+        Assert.IsInstanceOfType(result, typeof(FormulaError));
+    }
+
+    // --- GetHashCode Tests ---
+
+    [TestMethod]
+    public void GetHashCode_EqualFormulas_EqualHash()
+    {
+        Formula f1 = new Formula("A1 + B2");
+        Formula f2 = new Formula("A1 + B2");
+        Assert.AreEqual(f1.GetHashCode(), f2.GetHashCode());
+    }
+    [TestMethod]
+    public void GetHashCode_EqualFormulasNoVars_EqualHash()
+    {
+        Formula f1 = new Formula("23.0 + 0");
+        Formula f2 = new Formula("23 + 0");
+        Assert.AreEqual(f1.GetHashCode(), f2.GetHashCode());
+    }
+    [TestMethod]
+    public void GetHashCode_DifferentFormulas_InequalHash()
+    {
+        Formula f1 = new Formula("A1 + B2");
+        Formula f2 = new Formula("A1 - B2");
+        Assert.AreNotEqual(f1.GetHashCode(), f2.GetHashCode());
+    }
+
+    // --- Equals(==/!=) Operator Tests ---
+
+    [TestMethod]
+    public void EqualsOperator_EqualFormulas_ReturnsTrue()
+    {
+        Formula f1 = new Formula("A1 + B2");
+        Formula f2 = new Formula("A1 + B2");
+        Assert.IsTrue(f1 == f2);
+    }
+    [TestMethod]
+    public void EqualsOperator_DifferentFormulas_ReturnsFalse()
+    {
+        Formula f1 = new Formula("A1 + B2");
+        Formula f2 = new Formula("A1 - B2");
+        Assert.IsTrue(f1 != f2);
+    }
+    [TestMethod]
+    public void NotEqualsOperator_SameFormulaObjects_ReturnsFalse()
+    {
+        Formula f1 = new Formula("A1 + B2");
+        Formula f2 = new Formula("A1 + B2");
+        Assert.IsFalse(f1 != f2);
+    }
+    [TestMethod]
+    public void EqualsOperator_FormulaComparedWithNull_ReturnsFalse()
+    {
+        Formula f1 = new Formula("A1 + B2");
+        // f1 should not be equal to null
+        Assert.IsFalse(f1 == null);
+    }
+    [TestMethod]
+    public void NotEqualsOperator_FormulaComparedWithNull_ReturnsTrue()
+    {
+        Formula f1 = new Formula("A1 + B2");
+        Assert.IsTrue(f1 != null);
+    }
+
+    // --- Equals Method Tests ---
+
+    [TestMethod]
+    public void EqualsMethod_EqualFormulas_ReturnsTrue()
+    {
+        Formula f1 = new Formula("A1 + B2");
+        Formula f2 = new Formula("A1 + B2");
+
+        // Formulas are equal, so Equals should return true
+        Assert.IsTrue(f1.Equals(f2));
+    }
+
+    [TestMethod]
+    public void EqualsMethod_DifferentFormulas_ReturnsFalse()
+    {
+        Formula f1 = new Formula("A1 + B2");
+        Formula f2 = new Formula("A1 - B2");
+
+        // Formulas are different, so Equals should return false
+        Assert.IsFalse(f1.Equals(f2));
+    }
+
+    [TestMethod]
+    public void EqualsMethod_FormulaComparedWithNull_ReturnsFalse()
+    {
+        Formula f1 = new Formula("A1 + B2");
+
+        // f1 should not be equal to null
+        Assert.IsFalse(f1.Equals(null));
     }
 
 

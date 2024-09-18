@@ -356,4 +356,172 @@ public class DependencyGraphTests
         // Check D has A as dependent
         CollectionAssert.AreEquivalent(new List<string> { "A" }, dg.GetDependents("D").ToList());
     }
+
+
+    [TestMethod]
+    [Timeout(2000)]
+    [TestCategory("33")]
+    public void ReplaceDependees_OnEmptyGraph_AddsNewDependees()
+    {
+        DependencyGraph dg = new();
+
+        dg.ReplaceDependees("b", ["a"]);
+
+        Assert.AreEqual(1, dg.Size);
+        Assert.IsTrue(new HashSet<string> { "b" }.SetEquals(dg.GetDependents("a")));
+    }
+
+    // ********************************** A THIRD STESS TEST, REPEATED ******************** //
+
+    /// <summary>
+    ///    Using lots of data with replacement.
+    /// </summary>
+    [TestMethod]
+    [Timeout(2000)]
+    [TestCategory("45")]
+    public void StressTest15_1()
+    {
+        // Dependency graph
+        DependencyGraph t = new();
+
+        // A bunch of strings to use
+        const int SIZE = 1000;
+        string[] letters = new string[SIZE];
+        for (int i = 0; i < SIZE; i++)
+        {
+            letters[i] = "a" + i;
+        }
+
+        // The correct answers
+        HashSet<string>[] dents = new HashSet<string>[SIZE];
+        HashSet<string>[] dees = new HashSet<string>[SIZE];
+        for (int i = 0; i < SIZE; i++)
+        {
+            dents[i] = [];
+            dees[i] = [];
+        }
+
+        // Add a bunch of dependencies
+        for (int i = 0; i < SIZE; i++)
+        {
+            for (int j = i + 1; j < SIZE; j++)
+            {
+                t.AddDependency(letters[i], letters[j]);
+                dents[i].Add(letters[j]);
+                dees[j].Add(letters[i]);
+            }
+        }
+
+        for (int i = 0; i < SIZE; i++)
+        {
+            Assert.IsTrue(dents[i].SetEquals(new HashSet<string>(t.GetDependents(letters[i]))));
+            Assert.IsTrue(dees[i].SetEquals(new HashSet<string>(t.GetDependees(letters[i]))));
+        }
+
+        // Remove a bunch of dependencies
+        for (int i = 0; i < SIZE; i++)
+        {
+            for (int j = i + 2; j < SIZE; j += 3)
+            {
+                t.RemoveDependency(letters[i], letters[j]);
+                dents[i].Remove(letters[j]);
+                dees[j].Remove(letters[i]);
+            }
+        }
+
+        for (int i = 0; i < SIZE; i++)
+        {
+            Assert.IsTrue(dents[i].SetEquals(new HashSet<string>(t.GetDependents(letters[i]))));
+            Assert.IsTrue(dees[i].SetEquals(new HashSet<string>(t.GetDependees(letters[i]))));
+        }
+
+        // Replace a bunch of dependees
+        for (int i = 0; i < SIZE; i += 2)
+        {
+            HashSet<string> newDees = [];
+            for (int j = 0; j < SIZE; j += 9)
+            {
+                newDees.Add(letters[j]);
+            }
+
+            t.ReplaceDependees(letters[i], newDees);
+
+            foreach (string s in dees[i])
+            {
+                dents[int.Parse(s[1..])].Remove(letters[i]);
+            }
+
+            foreach (string s in newDees)
+            {
+                dents[int.Parse(s[1..])].Add(letters[i]);
+            }
+
+            dees[i] = newDees;
+        }
+
+        // Make sure everything is right
+        for (int i = 0; i < SIZE; i++)
+        {
+            Assert.IsTrue(dents[i].SetEquals(new HashSet<string>(t.GetDependents(letters[i]))));
+            Assert.IsTrue(dees[i].SetEquals(new HashSet<string>(t.GetDependees(letters[i]))));
+        }
+    }
+
+    /// <summary>
+    ///   Increase weight of StressTest15.
+    /// </summary>
+    [TestMethod]
+    [Timeout(2000)]
+    [TestCategory("46")]
+    public void StressTest15_2()
+    {
+        StressTest15_1();
+    }
+
+    /// <summary>
+    ///   Increase weight of StressTest15.
+    /// </summary>
+    [TestMethod]
+    [Timeout(2000)]
+    [TestCategory("47")]
+    public void StressTest17()
+    {
+        StressTest15_1();
+    }
+
+    /// <summary>
+    ///   Helper code to build a simple dependency graph.
+    /// </summary>
+    /// <returns> The new graph. </returns>
+    private static DependencyGraph SetupComplexDependencies()
+    {
+        DependencyGraph t = new();
+        t.AddDependency("x", "b");
+        t.AddDependency("a", "z");
+        t.ReplaceDependents("b", []);
+        t.AddDependency("y", "b");
+        t.ReplaceDependents("a", ["c"]);
+        t.AddDependency("w", "d");
+        t.ReplaceDependees("b", ["a", "c"]);
+        t.ReplaceDependees("d", ["b"]);
+        return t;
+    }
+}
+
+/// <summary>
+///   Helper methods for the tests above.
+/// </summary>
+public static class IEnumerableExtensions
+{
+    /// <summary>
+    ///   Check to see if the two "sets" (source and items) match, i.e.,
+    ///   contain exactly the same values.
+    /// </summary>
+    /// <param name="source"> original container.</param>
+    /// <param name="items"> elements to match against.</param>
+    /// <returns> true if every element in source is in items and vice versa. They are the "same set".</returns>
+    public static bool Matches(this IEnumerable<string> source, params string[] items)
+    {
+        return (source.Count() == items.Length) && items.All(item => source.Contains(item));
+    }
 }
