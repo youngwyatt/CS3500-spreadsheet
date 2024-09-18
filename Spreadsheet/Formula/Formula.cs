@@ -2,7 +2,7 @@
 // Copyright (c) 2024 UofU-CS3500. All rights reserved.
 // </copyright>
 // <authors> Wyatt Young </authors>
-// <date> September 14th, 2024 </date>
+// <date> September 18th, 2024 </date>
 // <summary>
 //   <para>
 //     This code is provides to start your assignment.  It was written
@@ -334,7 +334,15 @@ public class Formula
             // token is a variable
             else if (IsVar(token)) 
             {
-                double lookupVar = lookup(token);
+                double lookupVar;
+                try
+                {
+                    lookupVar = lookup(token);
+                }
+                catch (ArgumentException) 
+                {
+                    return new FormulaError("Var not defined");
+                }
                 // check for * or / on operator stack
                 if (IsOnTop(operatorStack, "*") || IsOnTop(operatorStack, "/"))
                 {
@@ -391,7 +399,7 @@ public class Formula
                     }
                     valueStack.Push(result);
                 }
-            }
+            } 
         }
         // once last token has been processed check if operator stack is empty
         // if empty return final value
@@ -415,7 +423,11 @@ public class Formula
         return operatorStack.Count != 0 && operatorStack.Peek() == op;
     }
     ///<summary>
-    ///private helper method for evaulating operators
+    /// private helper method for evaulating operators
+    /// determines the operation to be done and evaluates with two values and returns that value in the result out parameter
+    /// <returns>
+    ///  returns true if theres was no divison by zero, false if division by zero occurs
+    /// </returns>
     ///</summary>
     private static bool TryApplyOperator(Stack<string> operatorStack, Stack<double> valueStack, double? currVal, out double result) 
     {

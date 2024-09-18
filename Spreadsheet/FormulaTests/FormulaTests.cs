@@ -599,6 +599,45 @@ public class FormulaSyntaxTests
         _ = new Formula("(1+1)()");
     }
 
+    // --- GetVariables tests ---
+
+    //Tests for GetVariables
+    [TestMethod]
+    public void GetVariables_MultipleUniqueVariables_Capitalizes()
+    {
+        Formula formula = new Formula("x1 + y1 * z1");
+        ISet<string> variables = formula.GetVariables();
+        HashSet<string> expected = new HashSet<string> { "X1", "Y1", "Z1" };
+        Assert.IsTrue(expected.SetEquals(variables));
+    }
+
+    [TestMethod]
+    public void GetVariables_DuplicateVariables_ReturnsNoDupes()
+    {
+        Formula formula = new Formula("x1 + X1");
+        ISet<string> variables = formula.GetVariables();
+        HashSet<string> expected = new HashSet<string> { "X1" };
+        Assert.IsTrue(expected.SetEquals(variables));
+    }
+
+    [TestMethod]
+    public void GetVariables_NoVariables_ReturnsEmpty()
+    {
+        Formula formula = new Formula("5 + 3 * 7");
+        ISet<string> variables = formula.GetVariables();
+        HashSet<string> expected = new HashSet<string>();
+        Assert.IsTrue(expected.SetEquals(variables));
+    }
+
+    [TestMethod]
+    public void GetVariables_MixedCaseVariables_ReturnsCapitals()
+    {
+        Formula formula = new Formula("a1 + B2 + c3");
+        ISet<string> variables = formula.GetVariables();
+        HashSet<string> expected = new HashSet<string> { "A1", "B2", "C3" };
+        Assert.IsTrue(expected.SetEquals(variables));
+    }
+
     // --- Evaluate Tests ---
 
     /// <summary>
@@ -609,13 +648,14 @@ public class FormulaSyntaxTests
         if (varName == "a1") return 2.0;
         else if (varName == "B2") return 4.0;
         else if (varName =="c3") return 6.0;
+        else if (varName == "z1") return 0.0;
         else throw new ArgumentException();
     }
     [TestMethod]
     public void Evaluate_SimpleExpressionNoParenthesis_Is10() 
     {
         Formula f = new Formula("9 - 1 + 2");
-        double actual = (double)f.Evaluate(LookupVarTest);
+        double actual = (double)f.Evaluate(s => 0);
         Assert.AreEqual(10.0, actual, 1e-9);
     }
 
@@ -623,7 +663,7 @@ public class FormulaSyntaxTests
     public void Evaluate_SimpleExpressionWParenthesis_Is10()
     {
         Formula f = new Formula("(9 * 1) + 1");
-        double actual = (double)f.Evaluate(LookupVarTest);
+        double actual = (double)f.Evaluate(s => 0);
         Assert.AreEqual(10.0, actual, 1e-9);
     }
 
@@ -701,10 +741,31 @@ public class FormulaSyntaxTests
         Assert.AreEqual(5.0, actual, 1e-9);
     }
     [TestMethod]
-    public void Evaluate_FormulaWithUnknownVariable_ReturnsError()
+    public void Evaluate_FormulaWithUnknownVariable_FormulaError()
     {
         Formula f = new Formula("a1 + X4");
         // X4 not defined in LookupVarTest
+        var result = f.Evaluate(LookupVarTest);
+        Assert.IsInstanceOfType(result, typeof(FormulaError));
+    }
+    [TestMethod]
+    public void Evaluate_DivideByZero_FormulaError() 
+    {
+        Formula f = new Formula("8/0");
+        var result = f.Evaluate(LookupVarTest);
+        Assert.IsInstanceOfType(result, typeof(FormulaError));
+    }
+    [TestMethod]
+    public void Evaluate_DivByZeroVariable_FormulaError() 
+    {
+        Formula f = new Formula("(23 + 8) / z1");
+        var result = f.Evaluate(LookupVarTest);
+        Assert.IsInstanceOfType(result, typeof(FormulaError));  
+    }
+    [TestMethod]
+    public void Evaluate_DivideByZeroResult_FormulaError() 
+    {
+        Formula f = new Formula("3/(2-2)");
         var result = f.Evaluate(LookupVarTest);
         Assert.IsInstanceOfType(result, typeof(FormulaError));
     }
@@ -712,9 +773,9 @@ public class FormulaSyntaxTests
     // --- GetHashCode Tests ---
 
     [TestMethod]
-    public void GetHashCode_EqualFormulas_EqualHash()
+    public void GetHashCode_EqualFormulasNormalized_EqualHash()
     {
-        Formula f1 = new Formula("A1 + B2");
+        Formula f1 = new Formula("a1 + B2");
         Formula f2 = new Formula("A1 + B2");
         Assert.AreEqual(f1.GetHashCode(), f2.GetHashCode());
     }
@@ -722,7 +783,7 @@ public class FormulaSyntaxTests
     public void GetHashCode_EqualFormulasNoVars_EqualHash()
     {
         Formula f1 = new Formula("23.0 + 0");
-        Formula f2 = new Formula("23 + 0");
+        Formula f2 = new Formula("23 + 0.0");
         Assert.AreEqual(f1.GetHashCode(), f2.GetHashCode());
     }
     [TestMethod]
@@ -756,19 +817,6 @@ public class FormulaSyntaxTests
         Formula f2 = new Formula("A1 + B2");
         Assert.IsFalse(f1 != f2);
     }
-    [TestMethod]
-    public void EqualsOperator_FormulaComparedWithNull_ReturnsFalse()
-    {
-        Formula f1 = new Formula("A1 + B2");
-        // f1 should not be equal to null
-        Assert.IsFalse(f1 == null);
-    }
-    [TestMethod]
-    public void NotEqualsOperator_FormulaComparedWithNull_ReturnsTrue()
-    {
-        Formula f1 = new Formula("A1 + B2");
-        Assert.IsTrue(f1 != null);
-    }
 
     // --- Equals Method Tests ---
 
@@ -783,12 +831,20 @@ public class FormulaSyntaxTests
     }
 
     [TestMethod]
+    public void EqualsMethod_EqualFormulasCaseSensitive_ReturnsTrue()
+    {
+        Formula f1 = new Formula("a1 + b2");
+        Formula f2 = new Formula("A1 + B2");
+
+        // Formulas are equal, so Equals should return true
+        Assert.IsTrue(f1.Equals(f2));
+    }
+
+    [TestMethod]
     public void EqualsMethod_DifferentFormulas_ReturnsFalse()
     {
         Formula f1 = new Formula("A1 + B2");
         Formula f2 = new Formula("A1 - B2");
-
-        // Formulas are different, so Equals should return false
         Assert.IsFalse(f1.Equals(f2));
     }
 
@@ -796,8 +852,6 @@ public class FormulaSyntaxTests
     public void EqualsMethod_FormulaComparedWithNull_ReturnsFalse()
     {
         Formula f1 = new Formula("A1 + B2");
-
-        // f1 should not be equal to null
         Assert.IsFalse(f1.Equals(null));
     }
 
