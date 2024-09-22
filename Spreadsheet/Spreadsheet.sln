@@ -7,9 +7,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Formula", "Formula\Formula.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FormulaTests", "FormulaTests\FormulaTests.csproj", "{4C3ECC50-683D-48DA-9DDD-B52B410F406C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DependencyGraph", "DependencyGraph\DependencyGraph.csproj", "{0A1B429F-DC2B-41D9-A450-AE90A315B805}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyGraph", "DependencyGraph\DependencyGraph.csproj", "{0A1B429F-DC2B-41D9-A450-AE90A315B805}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DependencyGraphTests", "DependencyGraphTests\DependencyGraphTests.csproj", "{D40BE295-8FB0-4264-8617-3C1258589A25}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyGraphTests", "DependencyGraphTests\DependencyGraphTests.csproj", "{D40BE295-8FB0-4264-8617-3C1258589A25}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spreadsheet", "Spreadsheet\Spreadsheet.csproj", "{D25BC5BD-04C1-40E2-916B-D6B19B697F72}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpreadsheetTests", "SpreadsheetTests\SpreadsheetTests.csproj", "{DB4C004C-C5AA-45D2-831D-C9C6C25C52D4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +37,14 @@ Global
 		{D40BE295-8FB0-4264-8617-3C1258589A25}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D40BE295-8FB0-4264-8617-3C1258589A25}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D40BE295-8FB0-4264-8617-3C1258589A25}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D25BC5BD-04C1-40E2-916B-D6B19B697F72}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D25BC5BD-04C1-40E2-916B-D6B19B697F72}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D25BC5BD-04C1-40E2-916B-D6B19B697F72}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D25BC5BD-04C1-40E2-916B-D6B19B697F72}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DB4C004C-C5AA-45D2-831D-C9C6C25C52D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB4C004C-C5AA-45D2-831D-C9C6C25C52D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB4C004C-C5AA-45D2-831D-C9C6C25C52D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB4C004C-C5AA-45D2-831D-C9C6C25C52D4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

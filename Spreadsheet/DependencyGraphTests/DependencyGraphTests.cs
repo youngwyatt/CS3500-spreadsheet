@@ -4,6 +4,8 @@ using CS3500.DependencyGraph;
 /// This is a test class for DependencyGraphTest and is intended
 /// to contain all DependencyGraphTest Unit Tests
 /// </summary>
+/// <authors> Wyatt Young </authors>
+/// <date> September 21st, 2024 </date>
 [TestClass]
 public class DependencyGraphTests
 {
