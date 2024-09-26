@@ -19,10 +19,37 @@ public class SpreadsheetTests
     }
     [TestMethod]
     [ExpectedException(typeof(InvalidNameException))]
+    public void Spreadsheet_InvalidVar2_InvalidNameException()
+    {
+        Spreadsheet ss = new Spreadsheet();
+        ss.SetCellContents("1a2", "invalid name");
+    }
+    [TestMethod]
+    [ExpectedException(typeof(InvalidNameException))]
+    public void Spreadsheet_InvalidVar3_InvalidNameException()
+    {
+        Spreadsheet ss = new Spreadsheet();
+        ss.SetCellContents("abc", "invalid name");
+    }
+    [TestMethod]
+    [ExpectedException(typeof(InvalidNameException))]
+    public void Spreadsheet_InvalidVar4_InvalidNameException()
+    {
+        Spreadsheet ss = new Spreadsheet();
+        ss.SetCellContents("123", "invalid name");
+    }
+    [TestMethod]
+    [ExpectedException(typeof(InvalidNameException))]
     public void Spreadsheet_InvalidName_InvalidNameException()
     {
         Spreadsheet ss = new Spreadsheet();
         ss.SetCellContents(null, "invalid name");
+    }
+    [TestMethod]
+    public void Spreadsheet_TwoCharsTwoNums_Valid()
+    {
+        Spreadsheet ss = new Spreadsheet();
+        ss.SetCellContents("ab12", "invalid name");
     }
 
     // --- GetNamesOfAllEmptyCells Tests ---
@@ -72,7 +99,6 @@ public class SpreadsheetTests
         ss.SetCellContents("b1", "");
         Assert.AreEqual(string.Empty, ss.GetCellContents("b1"));
     }
-
     [TestMethod]
     public void GetCell_ReturnsEmptyString_WhenCellCleared()
     {

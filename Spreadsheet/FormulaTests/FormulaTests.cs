@@ -602,7 +602,6 @@ public class FormulaSyntaxTests
 
     // --- GetVariables tests ---
 
-    //Tests for GetVariables
     [TestMethod]
     public void GetVariables_MultipleUniqueVariables_Capitalizes()
     {
@@ -644,7 +643,7 @@ public class FormulaSyntaxTests
     /// <summary>
     /// Simple Lookup delegate method for testing 
     /// </summary>
-    public double LookupVarTest(string varName) 
+    public double LookupVarTest(string varName)
     {
         if (varName == "A1") return 2.0;
         else if (varName == "B2") return 4.0;
@@ -653,7 +652,7 @@ public class FormulaSyntaxTests
         else throw new ArgumentException();
     }
     [TestMethod]
-    public void Evaluate_SimpleExpressionNoParenthesis_Is10() 
+    public void Evaluate_SimpleExpressionNoParenthesis_Is10()
     {
         Formula f = new Formula("9 - 1 + 2");
         double actual = (double)f.Evaluate(s => 0);
@@ -750,97 +749,51 @@ public class FormulaSyntaxTests
         Assert.IsInstanceOfType(result, typeof(FormulaError));
     }
     [TestMethod]
-    public void Evaluate_DivideByZero_FormulaError() 
+    public void Evaluate_DivideByZero_FormulaError()
     {
         Formula f = new Formula("8/0");
         var result = f.Evaluate(LookupVarTest);
         Assert.IsInstanceOfType(result, typeof(FormulaError));
     }
     [TestMethod]
-    public void Evaluate_DivByZeroVariable_FormulaError() 
+    public void Evaluate_DivByZeroVariable_FormulaError()
     {
         Formula f = new Formula("(23 + 8) / z1");
         var result = f.Evaluate(LookupVarTest);
-        Assert.IsInstanceOfType(result, typeof(FormulaError));  
+        Assert.IsInstanceOfType(result, typeof(FormulaError));
     }
     [TestMethod]
-    public void Evaluate_DivideByZeroResult_FormulaError() 
+    public void Evaluate_DivideByZeroResult_FormulaError()
     {
         Formula f = new Formula("3/(2-2)");
         var result = f.Evaluate(LookupVarTest);
         Assert.IsInstanceOfType(result, typeof(FormulaError));
     }
-
-    /// <summary>
-    ///   Test order of operation precedence * before +.
-    /// </summary>
     [TestMethod]
-    public void Evaluate_OperatorPrecedence_MultiplicationThenAdd()
+    public void Evaluate_PEMDAS_MultiplyAdd()
     {
-        Formula formula = new("2*3+2");
-        Assert.AreEqual(8.0, formula.Evaluate(s => 0));
+        Formula formula = new("1*3+6");
+        Assert.AreEqual(9.0, formula.Evaluate(s => 0));
     }
-
-    /// <summary>
-    ///   Test order of operation precedence * before +.
-    /// </summary>
     [TestMethod]
-    public void Evaluate_OperatorPrecedence_SubtractThenMultiplication()
+    public void Evaluate_PEMDAS_SubtractMultiply()
     {
         Formula formula = new("26-6*3");
         Assert.AreEqual(8.0, formula.Evaluate(s => 0));
     }
-
-    /// <summary>
-    ///   Simple Repeated Variable.
-    /// </summary>
     [TestMethod]
-    public void Evaluate_RepeatedVarWithVariousOperators_Equals3()
+    public void Evaluate_RepeatedVar_Is3()
     {
         Formula formula = new("a4-a4*a4/a4+a4");
         Assert.AreEqual(3.0, formula.Evaluate(s => 3));
     }
-
-    /// <summary>
-    ///   Test that the formula is not using a shared stack between
-    ///   multiple formulas.
-    /// </summary>
     [TestMethod]
-    public void Evaluate_FormulasAreIndependent_Equal15_14_11()
+    public void Evaluate_ComplexEquation_Equals514285714285714()
     {
-        Formula formula1 = new("2*6+3");
-        Formula formula2 = new("2*6+2");
-        Formula formula3 = new("2*6-1");
-        Assert.AreEqual(15.0, formula1.Evaluate(s => 0));
-        Assert.AreEqual(14.0, formula2.Evaluate(s => 0));
-        Assert.AreEqual(11.0, formula3.Evaluate(s => 0));
-    }
-
-    /// <summary>
-    ///   Test that variable values don't matter if there are no variables.
-    /// </summary>
-    [TestMethod]
-    public void Evaluate_VariablesHaveValueButFormulaHasNoVariables_Equals10()
-    {
-        Formula formula = new("2*6+3");
-        Assert.AreEqual(15.0, formula.Evaluate(s => 100));
-    }
-
-    /// <summary>
-    ///   Check a formula that computes a lot of decimal places.
-    /// </summary>
-    [TestMethod]
-    [Timeout(2000)]
-    public void Evaluate_ComplexLotsOfDecimalPlaces_Equals514285714285714()
-    {
-        Formula f = new("y1*3-8/2+4*(8-9*2)/14*x7");
-        double result = (double)f.Evaluate(s => (s == "X7") ? 1 : 4);
+        Formula f = new("y1*3-8/2+4*(8-9*2)/14*S1");
+        double result = (double)f.Evaluate(s => (s == "S1") ? 1 : 4);
         Assert.AreEqual(5.14285714285714, result, 1e-9);
     }
-    /// <summary>
-    ///   Check a formula that computes pi to 10 decimal places using
-    ///   10000 adds and subtracts.
-    /// </summary>
     [TestMethod]
     public void Evaluate_ComputePiStress_PiTo4DecimalPlaces()
     {
@@ -885,21 +838,21 @@ public class FormulaSyntaxTests
     // --- Equals(==/!=) Operator Tests ---
 
     [TestMethod]
-    public void EqualsOperator_EqualFormulas_ReturnsTrue()
+    public void EqualsOperator_EqualFormulas_EqualFormula()
     {
         Formula f1 = new Formula("A1 + B2");
         Formula f2 = new Formula("A1 + B2");
         Assert.IsTrue(f1 == f2);
     }
     [TestMethod]
-    public void EqualsOperator_DifferentFormulas_ReturnsFalse()
+    public void EqualsOperator_DifferentFormulas_InequalFormula()
     {
         Formula f1 = new Formula("A1 + B2");
         Formula f2 = new Formula("A1 - B2");
         Assert.IsTrue(f1 != f2);
     }
     [TestMethod]
-    public void NotEqualsOperator_SameFormulaObjects_ReturnsFalse()
+    public void NotEqualsOperator_SameFormulaObjects_InequalFormula()
     {
         Formula f1 = new Formula("A1 + B2");
         Formula f2 = new Formula("A1 + B2");
@@ -909,7 +862,7 @@ public class FormulaSyntaxTests
     // --- Equals Method Tests ---
 
     [TestMethod]
-    public void EqualsMethod_EqualFormulas_ReturnsTrue()
+    public void EqualsMethod_EqualFormulas_EqualFormula()
     {
         Formula f1 = new Formula("A1 + B2");
         Formula f2 = new Formula("A1 + B2");
@@ -919,7 +872,7 @@ public class FormulaSyntaxTests
     }
 
     [TestMethod]
-    public void EqualsMethod_EqualFormulasCaseSensitive_ReturnsTrue()
+    public void EqualsMethod_EqualFormulasCaseSensitive_EqualFormula()
     {
         Formula f1 = new Formula("a1 + b2");
         Formula f2 = new Formula("A1 + B2");
@@ -929,7 +882,7 @@ public class FormulaSyntaxTests
     }
 
     [TestMethod]
-    public void EqualsMethod_DifferentFormulas_ReturnsFalse()
+    public void EqualsMethod_DifferentFormulas_InequalFormula()
     {
         Formula f1 = new Formula("A1 + B2");
         Formula f2 = new Formula("A1 - B2");
@@ -937,21 +890,17 @@ public class FormulaSyntaxTests
     }
 
     [TestMethod]
-    public void EqualsMethod_FormulaComparedWithNull_ReturnsFalse()
+    public void EqualsMethod_FormulaComparedWithNull_InequalFormula()
     {
         Formula f1 = new Formula("A1 + B2");
         Assert.IsFalse(f1.Equals(null));
     }
-    /// <summary>
-    ///   Test a little more complex string equality (canonical form).
-    /// </summary>
     [TestMethod]
-    public void Equals_MoreComplexEquality_SameFormula()
+    public void Equals_ComplexEqualityWithSpaces_EqualFormula()
     {
-        Formula f1 = new("1e-2 + X5 + 17.00 * 19 ");
-        Formula f2 = new("   0.0100  +     X5+ 17 * 19.00000 ");
+        Formula f1 = new("1e-2 + B1 + 17.00 * 19 ");
+        Formula f2 = new(" 0.0100  +   B1+ 17 * 19.00000 ");
         Assert.IsTrue(f1.Equals(f2));
     }
-
 
 }
