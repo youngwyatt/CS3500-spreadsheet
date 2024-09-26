@@ -276,8 +276,8 @@ public class Formula
     /// </returns>
     public override bool Equals(object? obj)
     {
-        if (obj == null) return false;
-        else return this.ToString() == obj.ToString();
+        if (obj is not Formula f) return false;
+        else return this.ToString() == f.ToString();
     }
     /// <summary>
     /// <para>
@@ -337,7 +337,7 @@ public class Formula
                 double lookupVar;
                 try
                 {
-                    lookupVar = lookup(token);
+                    lookupVar = lookup(token.ToUpper());
                 }
                 catch (ArgumentException) 
                 {

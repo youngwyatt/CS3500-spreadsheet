@@ -14,6 +14,7 @@ using CS3500.Formula;
 using CS3500.DependencyGraph;
 using System.Text.RegularExpressions;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Runtime.CompilerServices;
 
 /// <summary>
 ///   <para>
@@ -91,6 +92,41 @@ public class InvalidNameException : Exception
 /// </summary>
 public class Spreadsheet
 {
+
+    /// <summary>
+    /// newsted cell class to represent a single cell in the backing dictionary
+    /// </summary>
+    private class Cell 
+    {
+        // private member variable for Text field of Cell class
+        private string? Text { get; set; }
+        // private member variable for Number field of Cell class
+        private double? Number { get; set; }
+        // private member variable for Formula field of Cell class
+        private Formula? Formula { get; set; }
+        /// <summary>
+        /// Constructor for cell class takes in either text, a number, or a Formula.
+        /// </summary>
+        /// <param name="text">Text cell</param>
+        /// <param name="number">Number cell</param>
+        /// <param name="formula">Formula cell</param>
+        public Cell(string? text, double? number = null, Formula? formula = null)
+        {
+            this.Text = text;
+            this.Number = number;
+            this.Formula = formula;
+        }
+        /// <summary>
+        /// Helper method to return the cells contents 
+        /// </summary>
+        /// <returns>Cell object contents(string, double, or Formula)</returns>
+        public object? GetCell() 
+        {
+            if (Text != null && Text != string.Empty) return Text;
+            if (Number != null) return Number;
+            else return Formula;
+        }
+    }
     ///<summary>
     /// private member DependencyGraph object to back spreadsheet  
     /// </summary>
@@ -99,7 +135,7 @@ public class Spreadsheet
     ///<summary>
     /// private member Dictionary object to represent cell contents
     /// </summary>
-    private Dictionary<string, object> cellContents = new Dictionary<string, object>();
+    private Dictionary<string, Cell> cellSheet = new Dictionary<string, Cell>();
     
     /// <summary>
     ///   Provides a copy of the normalized names of all of the cells in the spreadsheet
@@ -110,7 +146,7 @@ public class Spreadsheet
     /// </returns>
     public ISet<string> GetNamesOfAllNonemptyCells()
     {
-        return new HashSet<string>(cellContents.Keys);
+        return new HashSet<string>(cellSheet.Keys);
     }
 
     /// <summary>
@@ -129,8 +165,12 @@ public class Spreadsheet
     public object GetCellContents(string name)
     {
         string normName = NormalizeValidateName(name);
-        if (cellContents.ContainsKey(normName)) { return cellContents[normName]; }
-        else return string.Empty;
+        if (cellSheet.TryGetValue(normName, out var cell))
+        {
+            return cell.GetCell() ?? string.Empty;
+        }
+        // return empty string if cell is not found or content is null
+        return string.Empty;  
     }
 
     /// <summary>
@@ -163,7 +203,8 @@ public class Spreadsheet
     public IList<string> SetCellContents(string name, double number)
     {
         string normName = NormalizeValidateName(name);
-        cellContents[normName] = number;
+        cellSheet[normName] = new Cell(null, number, null);
+        graph.ReplaceDependees(normName, new List<string>());   
         return GetCellsToRecalculate(normName).ToList();
     }
 
@@ -182,7 +223,17 @@ public class Spreadsheet
     public IList<string> SetCellContents(string name, string text)
     {
         string normName = NormalizeValidateName(name);
-        cellContents[normName] = text;
+        // remove empty cells
+        if (text == string.Empty || text == "")
+        {
+            cellSheet.Remove(normName);
+            graph.ReplaceDependees(normName, new List<string>());
+        }
+        else
+        {
+            cellSheet[normName] = new Cell(text);
+            graph.ReplaceDependees(normName, new List<string>());
+        }
         return GetCellsToRecalculate(normName).ToList();
     }
 
@@ -207,13 +258,22 @@ public class Spreadsheet
     public IList<string> SetCellContents(string name, Formula formula)
     {
         string normName = NormalizeValidateName(name);
-        cellContents[normName] = formula;
-        // add dependencies
-        foreach (string var in formula.GetVariables()) 
+        // store old dependees in case of circular exception
+        IEnumerable<string> oldDependees = graph.GetDependees(normName);
+        // replace dependees of adjusted/added cell
+        graph.ReplaceDependees(normName, formula.GetVariables());
+        try
         {
-            graph.AddDependency(normName, var);
+            IList<string> toRecalc = GetCellsToRecalculate(normName).ToList();
+            cellSheet[normName] = new Cell(null, null, formula);
+            return GetCellsToRecalculate(normName).ToList();
         }
-        return GetCellsToRecalculate(normName).ToList();
+        catch (CircularException) 
+        {
+            // if circular exception is thrown revert to old dependees
+            graph.ReplaceDependees(normName, oldDependees);
+            throw;
+        }
     }
 
     /// <summary>
@@ -238,7 +298,7 @@ public class Spreadsheet
     private IEnumerable<string> GetDirectDependents(string name)
     {
         string normName = NormalizeValidateName(name);
-        return graph.GetDependees(normName);
+        return graph.GetDependents(normName);
     }
 
     /// <summary>

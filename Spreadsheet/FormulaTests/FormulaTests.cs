@@ -7,6 +7,7 @@
 namespace CS3500.FormulaTests;
 
 using CS3500.Formula; // Change this using statement to use different formula implementations.
+using System.Text;
 
 /// <summary>
 ///   <para>
@@ -645,10 +646,10 @@ public class FormulaSyntaxTests
     /// </summary>
     public double LookupVarTest(string varName) 
     {
-        if (varName == "a1") return 2.0;
+        if (varName == "A1") return 2.0;
         else if (varName == "B2") return 4.0;
-        else if (varName =="c3") return 6.0;
-        else if (varName == "z1") return 0.0;
+        else if (varName =="C3") return 6.0;
+        else if (varName == "Z1") return 0.0;
         else throw new ArgumentException();
     }
     [TestMethod]
@@ -770,6 +771,93 @@ public class FormulaSyntaxTests
         Assert.IsInstanceOfType(result, typeof(FormulaError));
     }
 
+    /// <summary>
+    ///   Test order of operation precedence * before +.
+    /// </summary>
+    [TestMethod]
+    public void Evaluate_OperatorPrecedence_MultiplicationThenAdd()
+    {
+        Formula formula = new("2*3+2");
+        Assert.AreEqual(8.0, formula.Evaluate(s => 0));
+    }
+
+    /// <summary>
+    ///   Test order of operation precedence * before +.
+    /// </summary>
+    [TestMethod]
+    public void Evaluate_OperatorPrecedence_SubtractThenMultiplication()
+    {
+        Formula formula = new("26-6*3");
+        Assert.AreEqual(8.0, formula.Evaluate(s => 0));
+    }
+
+    /// <summary>
+    ///   Simple Repeated Variable.
+    /// </summary>
+    [TestMethod]
+    public void Evaluate_RepeatedVarWithVariousOperators_Equals3()
+    {
+        Formula formula = new("a4-a4*a4/a4+a4");
+        Assert.AreEqual(3.0, formula.Evaluate(s => 3));
+    }
+
+    /// <summary>
+    ///   Test that the formula is not using a shared stack between
+    ///   multiple formulas.
+    /// </summary>
+    [TestMethod]
+    public void Evaluate_FormulasAreIndependent_Equal15_14_11()
+    {
+        Formula formula1 = new("2*6+3");
+        Formula formula2 = new("2*6+2");
+        Formula formula3 = new("2*6-1");
+        Assert.AreEqual(15.0, formula1.Evaluate(s => 0));
+        Assert.AreEqual(14.0, formula2.Evaluate(s => 0));
+        Assert.AreEqual(11.0, formula3.Evaluate(s => 0));
+    }
+
+    /// <summary>
+    ///   Test that variable values don't matter if there are no variables.
+    /// </summary>
+    [TestMethod]
+    public void Evaluate_VariablesHaveValueButFormulaHasNoVariables_Equals10()
+    {
+        Formula formula = new("2*6+3");
+        Assert.AreEqual(15.0, formula.Evaluate(s => 100));
+    }
+
+    /// <summary>
+    ///   Check a formula that computes a lot of decimal places.
+    /// </summary>
+    [TestMethod]
+    [Timeout(2000)]
+    public void Evaluate_ComplexLotsOfDecimalPlaces_Equals514285714285714()
+    {
+        Formula f = new("y1*3-8/2+4*(8-9*2)/14*x7");
+        double result = (double)f.Evaluate(s => (s == "X7") ? 1 : 4);
+        Assert.AreEqual(5.14285714285714, result, 1e-9);
+    }
+    /// <summary>
+    ///   Check a formula that computes pi to 10 decimal places using
+    ///   10000 adds and subtracts.
+    /// </summary>
+    [TestMethod]
+    public void Evaluate_ComputePiStress_PiTo4DecimalPlaces()
+    {
+        StringBuilder formulaString = new("4 * ( 1");
+        bool negative = true;
+        for (int i = 3; i < 10000; i += 2)
+        {
+            formulaString.Append((negative ? "-" : "+") + $"1/{i}");
+            negative = !negative;
+        }
+
+        formulaString.Append(')');
+        Formula f = new(formulaString.ToString());
+        double result = (double)f.Evaluate(s => 0);
+        Assert.AreEqual(3.1415926535, result, 1e-3);
+    }
+
     // --- GetHashCode Tests ---
 
     [TestMethod]
@@ -853,6 +941,16 @@ public class FormulaSyntaxTests
     {
         Formula f1 = new Formula("A1 + B2");
         Assert.IsFalse(f1.Equals(null));
+    }
+    /// <summary>
+    ///   Test a little more complex string equality (canonical form).
+    /// </summary>
+    [TestMethod]
+    public void Equals_MoreComplexEquality_SameFormula()
+    {
+        Formula f1 = new("1e-2 + X5 + 17.00 * 19 ");
+        Formula f2 = new("   0.0100  +     X5+ 17 * 19.00000 ");
+        Assert.IsTrue(f1.Equals(f2));
     }
 
 
