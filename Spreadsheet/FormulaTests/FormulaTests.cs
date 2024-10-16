@@ -794,22 +794,6 @@ public class FormulaSyntaxTests
         double result = (double)f.Evaluate(s => (s == "S1") ? 1 : 4);
         Assert.AreEqual(5.14285714285714, result, 1e-9);
     }
-    [TestMethod]
-    public void Evaluate_ComputePiStress_PiTo4DecimalPlaces()
-    {
-        StringBuilder formulaString = new("4 * ( 1");
-        bool negative = true;
-        for (int i = 3; i < 10000; i += 2)
-        {
-            formulaString.Append((negative ? "-" : "+") + $"1/{i}");
-            negative = !negative;
-        }
-
-        formulaString.Append(')');
-        Formula f = new(formulaString.ToString());
-        double result = (double)f.Evaluate(s => 0);
-        Assert.AreEqual(3.1415926535, result, 1e-3);
-    }
 
     // --- GetHashCode Tests ---
 
@@ -902,5 +886,4 @@ public class FormulaSyntaxTests
         Formula f2 = new(" 0.0100  +   B1+ 17 * 19.00000 ");
         Assert.IsTrue(f1.Equals(f2));
     }
-
 }

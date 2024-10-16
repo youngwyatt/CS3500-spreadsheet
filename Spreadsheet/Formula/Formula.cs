@@ -243,7 +243,7 @@ public class Formula
     /// <returns> true if the two formulas are the same.</returns>
     public static bool operator ==(Formula f1, Formula f2)
     {
-        return f1.ToString().Equals(f2.ToString());
+        return f1.Equals(f2);
     }
     /// <summary>
     /// <para>
