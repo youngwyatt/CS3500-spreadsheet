@@ -137,11 +137,10 @@ public class SpreadsheetTests
         ss.SetContentsOfCell("a1", "=");
     }
     [TestMethod]
-    [ExpectedException(typeof(FormulaFormatException))]
     public void SetContentsOfCell_FormulaWithLeadingWhitespace_Valid()
     {
         Spreadsheet ss = new Spreadsheet();
-        ss.SetContentsOfCell("A1", "= 5 + 3"); 
+        ss.SetContentsOfCell("A1", " = 5 + 3"); 
     }
     [TestMethod]
     public void SetContentsOfCell_SimpleNumberStringFormula_Valid()
@@ -330,21 +329,21 @@ public class SpreadsheetTests
     /// --- GetCellValue Tests ---
 
     [TestMethod]
-    [ExpectedException(typeof(ArgumentException))]
-    public void GetCellValue_UnknownFormulaValue_ArgumentException() 
+    public void GetCellValue_UnknownFormulaValue_FormulaError() 
     {
         Spreadsheet ss = new();
         ss.SetContentsOfCell("a1", "=b1+3");
-        ss.GetCellValue("A1");
+        var result = ss.GetCellValue("A1");
+        Assert.IsInstanceOfType(result, typeof(FormulaError));
     }
     [TestMethod]
-    [ExpectedException(typeof(FormulaError))]
-    public void GetCellValue_ImproperFormula_FormulaError()
+    [ExpectedException(typeof(FormulaFormatException))]
+    public void GetCellValue_ImproperFormula_FormulaFormatException()
     {
         Spreadsheet ss = new();
         ss.SetContentsOfCell("a1", "=((b1+3) / 2");
         ss.SetContentsOfCell("b1", "2.0");
-        ss.GetCellValue("A1");
+        var result = ss.GetCellValue("A1");
     }
 
     /// --- LookupVar Tests ---
@@ -353,7 +352,7 @@ public class SpreadsheetTests
     public void LookupVar_SimpleDoubleVal_Is10()
     {
         Spreadsheet ss = new();
-        ss.SetContentsOfCell("c1", "2");
+        ss.SetContentsOfCell("c1", "5");
         ss.SetContentsOfCell("b1", "=C1*2");
         Assert.AreEqual(10.0, ss.GetCellValue("B1"));
     }
@@ -375,12 +374,84 @@ public class SpreadsheetTests
         Assert.AreEqual(10.0, ss.GetCellValue("A1"));
     }
     [TestMethod]
-    [ExpectedException(typeof(ArgumentException))]
-    public void LookupVar_UndefinedVar_ArgumentException() 
+    public void LookupVar_UndefinedVar_FormulaError() 
     {
         Spreadsheet ss = new();
         ss.SetContentsOfCell("a1", "=b1*2");
-        ss.GetCellValue("A1");
+        var result = ss.GetCellValue("A1");
+        Assert.IsInstanceOfType(result, typeof(FormulaError));
+    }
+
+    /// --- File Constructor tests ---
+
+    [TestMethod]
+    public void FileConstructor_EmptyFile_EmptySpreadsheet()
+    {
+        Spreadsheet s = new();
+        s.Save("test.txt");
+        Spreadsheet ss = new("test.txt");
+        Assert.AreEqual(s.GetNamesOfAllNonemptyCells().Count, ss.GetNamesOfAllNonemptyCells().Count);
+    }
+
+    [TestMethod]
+    public void FileConstructor_FilePathDoesNotExist_SpreadsheetReadWriteException()
+    {
+        Spreadsheet ss;
+        Assert.ThrowsException<SpreadsheetReadWriteException>(() => ss = new(Path.Combine("some", "random", "path.txt")));
+    }
+
+    [TestMethod]
+    public void FileConstructor_InvalidName_SpreadsheetReadWriteException()
+    {
+        string sampleText = "{\"Cells\":{\"A1\":{\"StringForm\":\"100\"},\"1A1\":{\"StringForm\":\"=A1\"},\"B23\":{\"StringForm\":\"hello\"}}}";
+        File.WriteAllText("sample1.txt", sampleText);
+        Spreadsheet ss;
+        Assert.ThrowsException<SpreadsheetReadWriteException>(() => ss = new("sample1.txt"));
+    }
+
+    [TestMethod]
+    public void FileConstructor_CircularDependency_SpreadsheetReadWriteException()
+    {
+        string sampleText = "{\"Cells\": {\"A1\": {\"StringForm\": \"100\" },\"A11\": { \"StringForm\": \"=A11\"},\"B23\": {\"StringForm\": \"hello\"}}}";
+        File.WriteAllText("sample.txt", sampleText);
+        Spreadsheet ss;
+        Assert.ThrowsException<SpreadsheetReadWriteException>(() => ss = new("sample.txt"));
+    }
+
+    [TestMethod]
+    public void FileConstructor_InvalidFormula_SpreadsheetReadWriteException()
+    {
+        string sampleText = "{\"Cells\": {\"A1\": {\"StringForm\": \"100\" },\"A11\": {\"StringForm\": \"=13 + 1A45\"},\"B23\": {\"StringForm\": \"hello\"}}}";
+        File.WriteAllText("sampleFile.txt", sampleText);
+        Spreadsheet ss;
+        Assert.ThrowsException<SpreadsheetReadWriteException>(() => ss = new("sampleFile.txt"));
+    }
+
+    [TestMethod]
+    public void FileConstructor_InvalidJSONFormat_SpreadsheetReadWriteException()
+    {
+        string sampleText = "hello";
+        File.WriteAllText("sampleFile0.txt", sampleText);
+        Spreadsheet ss;
+        Assert.ThrowsException<SpreadsheetReadWriteException>(() => ss = new("sampleFile0.txt"));
+    }
+
+    [TestMethod]
+    public void FileConstructor_InvalidObjectFormat_SpreadsheetReadWriteException()
+    {
+        string sampleText = "{\"hello\":\"32\"}";
+        File.WriteAllText("sampleFile1.txt", sampleText);
+        Spreadsheet ss;
+        Assert.ThrowsException<SpreadsheetReadWriteException>(() => ss = new("sampleFile1.txt"));
+    }
+
+    [TestMethod]
+    public void FileConstructor_EmptyJSON_SpreadsheetReadWriteException()
+    {
+        string sampleText = "null";
+        File.WriteAllText("sampleFile2.txt", sampleText);
+        Spreadsheet ss;
+        Assert.ThrowsException<SpreadsheetReadWriteException>(() => ss = new("sampleFile2.txt"));
     }
     //// EMPTY SPREADSHEETS
     //[TestMethod(), Timeout(2000)]

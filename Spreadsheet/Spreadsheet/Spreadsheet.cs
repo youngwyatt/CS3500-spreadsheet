@@ -113,55 +113,46 @@ public class Spreadsheet
 {
 
     /// <summary>
-    /// newsted cell class to represent a single cell in the backing dictionary
+    /// newsted cell class to represent a single cell in the backing dictionary. Contents include; contents(could be a 
+    /// double, string, or Formula), Value(double, string or Formula), and StringForm(the string representation of the contents
+    /// to be displayed in the GUI)
     /// </summary>
     private class Cell 
     {
-        // private member variable for Text field of Cell class
-        private string? Text { get; set; }
-        // private member variable for Number field of Cell class
-        private double? Number { get; set; }
-        // private member variable for Formula field of Cell class
-        private Formula? Formula { get; set; }
+        /// <summary>
+        /// property for Contents field of Cell class; double, string, or Formula
+        /// </summary>
+        [JsonIgnore]
+        public object Contents { get; set; }
+        /// <summary>
+        /// property for Value field of Cell class
+        /// </summary>
+        [JsonIgnore]
+        public object Value { get; set; }
+        /// <summary>
+        /// property for StringForm field of Cell class
+        /// </summary>
+        [JsonIgnore]
+        public string StringForm { get; set; }
         /// <summary>
         /// Constructor for cell class takes in either text, a number, or a Formula.
         /// </summary>
-        /// <param name="text">Text cell</param>
-        /// <param name="number">Number cell</param>
-        /// <param name="formula">Formula cell</param>
-        public Cell(string? text, double? number = null, Formula? formula = null)
+        /// <param name="contents">Content of cell</param>
+        /// <param name="value">Value of cell that is updated when spreadsheet is changed</param>
+        public Cell(object contents, object value)
         {
-            if (text != null)
+            Contents = contents;
+            Value = value;
+            if (contents is double contDouble)
             {
-                this.Text = text;
+                StringForm = contDouble.ToString();
             }
-            else if (number != null)
+            else if (contents is Formula f)
             {
-                this.Number = number;
+                StringForm = "=" + f.ToString();
             }
             else
-            {
-                this.Formula = formula;
-            }
-        }
-        /// <summary>
-        /// Helper method to return the cells contents 
-        /// </summary>
-        /// <returns>Cell object contents(string, double, or Formula)</returns>
-        public object? GetCell() 
-        {
-            if (Text != null && Text != string.Empty) return Text;
-            if (Number.HasValue) return Number.Value;
-            else return Formula;
-        }
-        ///<summary>
-        /// Helper method to help identify the type of the cell; i.e text, Number, or Formula
-        /// </summary>
-        public string GetCellType() 
-        {
-            if (Text != null && Text != string.Empty) return "Text";
-            if (Number != null) return "Number";
-            return "Formula";   
+                StringForm = (string)contents;
         }
     }
 
@@ -174,8 +165,7 @@ public class Spreadsheet
     /// private member Dictionary object to represent cell contents
     /// </summary>
     [JsonInclude]
-    [JsonPropertyName("Cells")]
-    private Dictionary<string, Cell> cellSheet = new Dictionary<string, Cell>();
+    private Dictionary<string, Cell> Cells = new Dictionary<string, Cell>();
 
     /// <summary>
     ///   <para>
@@ -192,7 +182,7 @@ public class Spreadsheet
     /// </exception>
     public object this[string name]
     {
-        get { return GetCellValue(NormalizeValidateName(name)); }
+        get { return GetCellValue(name); }
     }
 
 
@@ -211,7 +201,7 @@ public class Spreadsheet
     public Spreadsheet() 
     {
         this.graph = new DependencyGraph();
-        this.cellSheet = new Dictionary<string, Cell>();
+        this.Cells = new Dictionary<string, Cell>();
         this.Changed = false;
     }
 
@@ -230,24 +220,24 @@ public class Spreadsheet
         {
             // read JSON file
             string file = File.ReadAllText(filename);
-            // deserialize
-            var deserializedFile = JsonSerializer.Deserialize<SpreadsheetJson>(file);
+            // deserialize into matching structure
+            var deserializedFile = JsonSerializer.Deserialize<Dictionary<string, string>>(file);
             // check for null/empty file content
-            if (deserializedFile == null || deserializedFile.CellsJson == null)
+            if (deserializedFile == null)
             {
                 throw new SpreadsheetReadWriteException("File content is empty or invalid");
             }
             // initialize new Spreadsheet
             this.graph = new DependencyGraph();
-            this.cellSheet = new Dictionary<string, Cell>();
+            this.Cells = new Dictionary<string, Cell>();
             this.Changed = false;
             // check each cell in file and add to new spreadsheet if valid cell data
-            foreach (var data in deserializedFile.CellsJson)
+            foreach (var data in deserializedFile)
             {
-                // validate name
+                // validate normalize name
                 string cellName = NormalizeValidateName(data.Key);
-                string content = data.Value.StringForm;
-                SetContentsOfCell(cellName, content);
+                // use SetContents to update/recalculate cells in this spreadsheet
+                SetContentsOfCell(cellName, data.Value);
             }
         }
         catch (Exception ex)
@@ -263,12 +253,12 @@ public class Spreadsheet
         ///<summary>
         /// dictionary object for storing cell data
         /// </summary>
-        public Dictionary<string, CellData>? CellsJson { get; set; }
+        public Dictionary<string, CellJson>? CellsJson { get; set; }
     }
     ///<summary>
     /// Helper class that contains StringForm for use in Json deserialization
     /// </summary>
-    private class CellData 
+    private class CellJson 
     {
         ///<summary>
         /// StringForm property for Json deserialization to match structure of passed file
@@ -375,31 +365,11 @@ public class Spreadsheet
     public object GetCellValue(string name)
     {
         string normName = NormalizeValidateName(name);
-        object content = GetCellContents(normName);
-        if (content is string)
-        {
-            string strContent = (string)content;
-            // check for formula
-            if (strContent.StartsWith("="))
-            {
-                // evaluate and return if so
-                Formula f = new Formula(strContent.Substring(1));
-                return f.Evaluate(LookupVar);
-            }
-            // normal text box
-            else return content;
-        }
-        // check for double
-        else if (content is double) 
-        {
-            return (double)content;
-        }
-        else if(content is Formula)
-        {
-            return ((Formula)content).Evaluate(LookupVar);
-        }
-        // return empty string if cell is not found or value is null
-        return string.Empty;
+        if (Cells.TryGetValue(normName, out Cell? cell)) 
+            return cell.Value;
+        else 
+            // return empty string if cell is not found or value is null
+            return string.Empty;
     }
 
     /// <summary>
@@ -467,35 +437,29 @@ public class Spreadsheet
     public IList<string> SetContentsOfCell(string name, string content)
     {
         string normName = NormalizeValidateName(name);
-        // if content is empty or null dont add/remove from spreadsheet
-        if (string.IsNullOrEmpty(content)) 
-        {
-            return SetCellContents(normName, string.Empty);
-        }
+        IList<string> toRecalculate;
+        string strContent = content.Replace(" ", "");
         // check content is a number
         if (double.TryParse(content, out double num))
         {
-            return SetCellContents(normName, num);
+            toRecalculate = SetCellContents(normName, num);
         }
-        // check content is a string
-        else if (content[0] != '=')
+        // check content is a string or empty
+        else if (string.IsNullOrEmpty(content) || strContent[0] != '=')
         {
-            return SetCellContents(normName, content);
+            toRecalculate = SetCellContents(normName, content);
         }
-        // content is a formula
-        Formula f;
-        string formContent = content.Substring(1);
-        try
+        else
         {
-            // attempt to parse
-            f = new Formula(formContent);
+            // content is a formula, attempt to parse and Formula constructor will throw if invalid
+            string formContent = strContent.Substring(1);
+            Formula f = new Formula(formContent);
+            // Set will handle Circular Exceptions
+            toRecalculate = SetCellContents(normName, f);
         }
-        catch (FormulaFormatException)
-        {
-            throw new FormulaFormatException("Content couldn't be parsed as Formula");
-        }
-        // attempt to place in spreadsheet w/out any circular dependencies
-        return SetCellContents(normName, f);
+        RecalculateValues(toRecalculate);
+        Changed = true;
+        return toRecalculate;
     }
 
     /// <summary>
@@ -507,7 +471,7 @@ public class Spreadsheet
     /// </returns>
     public ISet<string> GetNamesOfAllNonemptyCells()
     {
-        return new HashSet<string>(cellSheet.Keys);
+        return new HashSet<string>(Cells.Keys);
     }
 
     /// <summary>
@@ -526,12 +490,11 @@ public class Spreadsheet
     public object GetCellContents(string name)
     {
         string normName = NormalizeValidateName(name);
-        if (cellSheet.TryGetValue(normName, out var cell))
-        {
-            return cell.GetCell() ?? string.Empty;
-        }
-        // return empty string if cell is not found or content is null
-        return string.Empty;  
+        if (Cells.TryGetValue(normName, out Cell? cell))
+            return cell.Contents;
+        else
+            // return empty string if cell is not found or content is null
+            return string.Empty;  
     }
     
     /// </summary>
@@ -564,7 +527,7 @@ public class Spreadsheet
     /// </returns>
     private IList<string> SetCellContents(string name, double number)
     {
-        cellSheet[name] = new Cell(null, number, null);
+        Cells[name] = new Cell(number, number);
         graph.ReplaceDependees(name, new List<string>());   
         return GetCellsToRecalculate(name).ToList();
     }
@@ -586,12 +549,12 @@ public class Spreadsheet
         // remove empty cells
         if (text == string.Empty || text == "")
         {
-            cellSheet.Remove(name);
+            Cells.Remove(name);
             graph.ReplaceDependees(name, new List<string>());
         }
         else
         {
-            cellSheet[name] = new Cell(text);
+            Cells[name] = new Cell(text, text);
             graph.ReplaceDependees(name, new List<string>());
         }
         return GetCellsToRecalculate(name).ToList();
@@ -624,7 +587,7 @@ public class Spreadsheet
         try
         {
             IList<string> toRecalc = GetCellsToRecalculate(name).ToList();
-            cellSheet[name] = new Cell(null, null, formula);
+            Cells[name] = new Cell(formula, formula.Evaluate(LookupVar));
             return GetCellsToRecalculate(name).ToList();
         }
         catch (CircularException) 
@@ -639,6 +602,7 @@ public class Spreadsheet
     /// <exception cref="ArgumentException">
     /// If value is unknown
     /// </exception>
+    /// <paramref name="variableName"/> name of where spreadsheet must look up value
     /// <returns>
     /// the value of the input variable name
     /// </returns>
@@ -646,19 +610,30 @@ public class Spreadsheet
     {
         string normName = NormalizeValidateName(variableName);
         // determine contents of variable 
-        //HashSet<string> cells = (HashSet<string>)GetNamesOfAllNonemptyCells();
-        if (cellSheet.TryGetValue(normName, out var cell)) 
+        object cellValue = GetCellValue(normName);
+        if (cellValue is double d)
+            return d;
+        else
+            throw new ArgumentException("Cell for variable does not contain a double");
+    }
+    ///<summary>
+    /// private helper method to recalculate values once a change is made to the spreadsheet. 
+    /// </summary>
+    /// <param name="toRecalculate"> List of cell names to be recalculated in order given by private Set methods</param>
+    private void RecalculateValues(IList<string> toRecalculate) 
+    {
+        // iterate through cells to be recalculated
+        foreach (string cell in toRecalculate) 
         {
-            object? content = cell.GetCell();
-            if (content != null)
+            // deal w cells changed to be empty
+            if (!Cells.ContainsKey(cell)) continue;
+            object contents = GetCellContents(cell);
+            if (contents is Formula f)
             {
-                if (double.TryParse((string)content, out double num)) 
-                {
-                    return num;
-                }
+                Cells[cell].Value = f.Evaluate(LookupVar);
             }
+            else Cells[cell].Value = contents;
         }
-        throw new ArgumentException("Variable not found on lookup");
     }
     /// <summary>
     ///   Returns an enumeration, without duplicates, of the names of all cells whose
