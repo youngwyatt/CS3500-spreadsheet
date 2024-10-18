@@ -7,7 +7,7 @@
 //     - Updated return types
 //     - Updated documentation
 // <authors> Wyatt Young </authors>
-// <date> October 13th, 2024 </date>
+// <date> October 17th, 2024 </date>
 namespace CS3500.Spreadsheet;
 
 using CS3500.Formula;
@@ -132,7 +132,6 @@ public class Spreadsheet
         /// <summary>
         /// property for StringForm field of Cell class
         /// </summary>
-        [JsonIgnore]
         public string StringForm { get; set; }
         /// <summary>
         /// Constructor for cell class takes in either text, a number, or a Formula.
@@ -165,6 +164,7 @@ public class Spreadsheet
     /// private member Dictionary object to represent cell contents
     /// </summary>
     [JsonInclude]
+    [JsonPropertyName("Cells")]
     private Dictionary<string, Cell> Cells = new Dictionary<string, Cell>();
 
     /// <summary>
@@ -221,9 +221,9 @@ public class Spreadsheet
             // read JSON file
             string file = File.ReadAllText(filename);
             // deserialize into matching structure
-            var deserializedFile = JsonSerializer.Deserialize<Dictionary<string, string>>(file);
+            var deserializedFile = JsonSerializer.Deserialize<SpreadsheetJson>(file);
             // check for null/empty file content
-            if (deserializedFile == null)
+            if (deserializedFile == null || deserializedFile.Cells == null)
             {
                 throw new SpreadsheetReadWriteException("File content is empty or invalid");
             }
@@ -232,12 +232,12 @@ public class Spreadsheet
             this.Cells = new Dictionary<string, Cell>();
             this.Changed = false;
             // check each cell in file and add to new spreadsheet if valid cell data
-            foreach (var data in deserializedFile)
+            foreach (var data in deserializedFile.Cells)
             {
                 // validate normalize name
                 string cellName = NormalizeValidateName(data.Key);
                 // use SetContents to update/recalculate cells in this spreadsheet
-                SetContentsOfCell(cellName, data.Value);
+                SetContentsOfCell(cellName, data.Value.StringForm);
             }
         }
         catch (Exception ex)
@@ -253,7 +253,7 @@ public class Spreadsheet
         ///<summary>
         /// dictionary object for storing cell data
         /// </summary>
-        public Dictionary<string, CellJson>? CellsJson { get; set; }
+        public Dictionary<string, CellJson>? Cells { get; set; }
     }
     ///<summary>
     /// Helper class that contains StringForm for use in Json deserialization
@@ -340,7 +340,7 @@ public class Spreadsheet
             // build string from serializer and write to file
             string JsonSerialized = JsonSerializer.Serialize(this, JsonOptions);
             File.WriteAllText(filename, JsonSerialized);
-            // change to true as sheet was saved
+            // change to false as sheet was saved
             Changed = false;
         }
         catch (Exception ex) 
@@ -555,6 +555,7 @@ public class Spreadsheet
         else
         {
             Cells[name] = new Cell(text, text);
+            // replace dependees with empty list since not a formula
             graph.ReplaceDependees(name, new List<string>());
         }
         return GetCellsToRecalculate(name).ToList();
@@ -588,7 +589,7 @@ public class Spreadsheet
         {
             IList<string> toRecalc = GetCellsToRecalculate(name).ToList();
             Cells[name] = new Cell(formula, formula.Evaluate(LookupVar));
-            return GetCellsToRecalculate(name).ToList();
+            return toRecalc;
         }
         catch (CircularException) 
         {
@@ -719,25 +720,30 @@ public class Spreadsheet
     }
 
     /// <summary>
-    ///   A helper for the GetCellsToRecalculate method.
-    ///   FIXME: You should fully comment what is going on below using XML tags as appropriate,
-    ///   as well as inline comments in the code.
+    /// A recursive helper method for the GetCellsToRecalculate method. It ensures that all cells
+    /// dependent on the changed cell are visited and recalculated in the correct order. Throws a 
+    /// CircularException if a circular dependency is found.
     /// </summary>
     private void Visit(string start, string name, ISet<string> visited, LinkedList<string> changed)
     {
+        // add name as visited so its not revisited
         visited.Add(name);
+        // loop dependents of cell changed
         foreach (string n in GetDirectDependents(name))
         {
+            // check foir circular exceptions
             if (n.Equals(start))
             {
                 throw new CircularException();
             }
+            // visit unvisited cells recursively
             else if (!visited.Contains(n))
             {
+                // recursive call
                 Visit(start, n, visited, changed);
             }
         }
-
+        // add current name to changed once recursive stack ends
         changed.AddFirst(name);
     }
 
